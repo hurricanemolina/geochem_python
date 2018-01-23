@@ -36,10 +36,10 @@ kii_hi = 0.00005
 kiii_hi = 0.000009
 kiiii_hi = 0.0000005
 
-ki = np.arange(ki_low,ki_hi,0.00000001)
-kii = np.arange(kii_low,kii_hi,0.00000001)
-kiii = np.arange(kiii_low,kiii_hi,0.00000001)
-kiiii = np.arange(kiiii_low,kiiii_hi,0.00000001)
+ki = np.linspace(ki_low,ki_hi,100000)
+kii = np.linspace(kii_low,kii_hi,100000)
+kiii = np.linspace(kiii_low,kiii_hi,100000)
+kiiii = np.linspace(kiiii_low,kiiii_hi,100000)
 
 #note: no kv for E needed
 #note: ki>kii>kiii>kiiii
@@ -51,7 +51,7 @@ kiiii = np.arange(kiiii_low,kiiii_hi,0.00000001)
 
 
 #time (seconds) intervals
-t = np.array([0,7200,36000,86400,172800,259200,432000])
+time = np.array([0,7200,36000,86400,172800,259200,432000])
 
 #total concentration
 T_c = 0.000051279938744597
@@ -65,15 +65,17 @@ A_o = 0.000051279938744597
 ############################################################################### 
 
 
-A = A_o * np.exp(-ki*t)
+for t in time:
 
-B = np.divide((ki*A_o),(kii-ki)) * (np.exp(-ki*t)-np.exp(-kii*t))
+    A = A_o * np.exp(-ki*t)
 
-C = np.divide((ki*A_o),(kii-ki)) * ((kii(1-np.exp(-ki*t))) - (1-np.exp(-kii*t)))
+    B = np.divide((ki*A_o),(kii-ki)) * (np.exp(-ki*t)-np.exp(-kii*t))
+    
+    C = np.divide((ki*A_o),(kii-ki)) * ((kii(1-np.exp(-ki*t))) - (1-np.exp(-kii*t)))
 
-#E = 
+    #E = 
 
-#D = 
+    #D = 
 
 
 
