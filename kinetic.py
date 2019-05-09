@@ -1,13 +1,12 @@
 #!/usr/bin/env python2
 # -*- coding: utf-8 -*-
 """
-
 Created on Sun Jan 21 01:29:09 2018
 
-Maria J. Molina
-Ph.D. Student 
-Central Michigan University
-
+Authors:
+Stephan Hlohowskyj
+and
+Dr. Maria J. Molina
 
 """
 
