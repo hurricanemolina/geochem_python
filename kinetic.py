@@ -95,6 +95,7 @@ E_exp = np.array([0.0000000000000000,0.0000006430691966,
 ###############################################################################
 ############################################################################### 
 
+# we will only have 4 equations since we are ignoring back reations, so the reactions proceede from A->D
 
 for t in time:
 
@@ -102,15 +103,18 @@ for t in time:
 
     B = np.divide((ki*A_o),(kii-ki)) * (np.exp(-ki*t)-np.exp(-kii*t))
     
-    C = np.divide((ki*A_o),(kii-ki)) * ((kii(1-np.exp(-ki*t))) - (1-np.exp(-kii*t)))
+    #Subject to change, Natalia and Dimtry will check my math for these equations
+    
+    C =  np.divide((ki*A_o),(kii-k_i)) * ((kiii-k_i) * np.exp(-ki*t) - (kiii-kii) * np.exp(-kii*t) +  (ki-kii) * np.exp(-kiii*t))
+  
+    D = np.divide((ki*A_o*kiii), (kii-k_i)) * ((np.divide((kiii-k_i),(-k_i)) * np.exp(-ki*t)
+                  - np.divide((kiii-kii),(-kii)) * np.exp(-kii*t) + np.divide((ki-kii),(-kiii)) * np.exp(-kiii*t)
+                  - (np.divide((ki*A_o*kiii),(kii-ki)) * (np.divide((kiii-ki),(-k_i) - np.divide((kiii-kii),(-kii) 
+                  + np.divide((ki-kii),(-kiii)))
 
-    #E = 
-
-    #D = 
 
 
-
-A_o = Tc = A + B + C #+ E + D
+A_o = Tc = A + B + C + D
 
 
 
@@ -118,7 +122,6 @@ A_o = Tc = A + B + C #+ E + D
 ###############################################################################
 ###############################################################################  
 
+#Monte Carlo simulation
 
-
-
-
+  
