@@ -34,22 +34,21 @@ file1 = pd.read_excel('file1_stephan.xlsx', skiprows=1)
 #for vectorized operations [makes handling missing data easier for later computations])
 file1 = file1.replace('ND', np.nan)
 
-
-##############################################################################  
-##############################################################################  
-##############################################################################  
-
-
 #arrange the data into an xarray dataset with data information
-data = xr.Dataset({'MoO4':(['time'], file1['MoO4 (M)'].values),
-                   'MoO3S':(['time'], file1['MoO3S (M)'].values),
-                   'MoO2S2':(['time'], file1['MoO2S2 (M)'].values),
-                   'MoOS3':(['time'], file1['MoOS3 (M)'].values),
-                   'MoS4':(['time'], file1['MoS4 (M)'].values)},
+data = xr.Dataset({'A_o':(['time'], file1['MoO4 (M)'].values),
+                   'A':(['time'], file1['MoO3S (M)'].values),
+                   'B':(['time'], file1['MoO2S2 (M)'].values),
+                   'C':(['time'], file1['MoOS3 (M)'].values),
+                   'D':(['time'], file1['MoS4 (M)'].values)},
                    coords={'time':file1['time (s)'].values},
                    attrs={'File Contents':'Concentration Data',
                           'Data Owner':'Stephan Hlohowskyj',
-                          'Time Units':'Seconds (s)'})
+                          'Time Units':'Seconds (s)',
+                          'A_o':'MoO4',
+                          'A':'MoO3S',
+                          'B':'MoO2S2',
+                          'C':'MoOS3',
+                          'D':'MoS4'})
 
 #save the dataset into a netCDF file for later use in Step 1
 data.to_netcdf('file1_new_stephan.nc')
@@ -62,10 +61,26 @@ data.to_netcdf('file1_new_stephan.nc')
 
 #repeat steps above for file2 to create new netCDF file.
 
-#file2 = pd.read_excel('file2_stephan.xlsx', skiprows=1)
+file2 = pd.read_excel('file2_stephan.xlsx', skiprows=1)
 
+file2 = file2.replace('ND', np.nan)
 
-# ...
+data2 = xr.Dataset({'A_o':(['time'], file2['MoO4 (M)'].values),
+                    'A':(['time'], file2['MoO3S (M)'].values),
+                    'B':(['time'], file2['MoO2S2 (M)'].values),
+                    'C':(['time'], file2['MoOS3 (M)'].values),
+                    'D':(['time'], file2['MoS4 (M)'].values)},
+                    coords={'time':file2['time (s)'].values},
+                    attrs={'File Contents':'Isotope Data',
+                           'Data Owner':'Stephan Hlohowskyj',
+                           'Time Units':'Seconds (s)',
+                           'A_o':'MoO4',
+                           'A':'MoO3S',
+                           'B':'MoO2S2',
+                           'C':'MoOS3',
+                           'D':'MoS4'})
+
+data2.to_netcdf('file2_new_stephan.nc')
 
 
 ##############################################################################  
