@@ -13,7 +13,7 @@ Dr. Maria J. Molina
 
 ###############################################################################
 ###############################################################################
-###############################################################################  
+###############################################################################
 
 
 #this import needed for me because I am still using python version 2.7...
@@ -26,30 +26,37 @@ import matplotlib.pyplot as plt
 
 ###############################################################################
 ###############################################################################
-###############################################################################  
+###############################################################################
 
 
-number_of_samples = 1000
+number_of_samples = 100
 
 
 ###############################################################################
 ###############################################################################
-###############################################################################  
+###############################################################################
 
 
 #k value ranges
 
 #MARIA'S QUESTION: do we no longer need kiiii? noticed we don't have this variable in equations.
 
-ki_low = 0.00005
-kii_low = 0.000009 
-kiii_low = 0.0000005 
-#kiiii_low = 0.00000001 
+#k values are based on experiments in: Clarke et al (1987) Kinetics of the formation and hydrolysis
+#reaction of some thiomolybdate(VI) anions in aqueous solution. Inorg. Chim. Acta
+#and Harmer & Sykes (1980). Kinetics of the Interconversion of Sulfido- and
+#Oxomolybdate(VI) Species MoOxS4-x2- in Aqueous Solutions. Inorganic Chemistry
 
-ki_hi = 0.0005
-kii_hi = 0.00005 
-kiii_hi = 0.000009
-#kiiii_hi = 0.0000005
+ki_low = 9e-5 #k_{01}
+kii_low = 9e-6 #k_{12}
+kiii_low = 9e-4 #k_{23}
+#kiiii_low = 1e-8 #K_{34}
+
+ki_hi = 2e-4
+kii_hi = 2e-5
+kiii_hi = 2e-3
+#kiiii_hi = 5e-7
+
+
 
 ki_range = np.linspace(ki_low,ki_hi,10)
 kii_range = np.linspace(kii_low,kii_hi,10)
@@ -62,7 +69,7 @@ kiii_range = np.linspace(kiii_low,kiii_hi,10)
 
 ###############################################################################
 ###############################################################################
-############################################################################### 
+###############################################################################
 
 
 #import your data set in netcdf format
@@ -75,7 +82,7 @@ Ao_realvalues = data.A_o[:7].values
 
 ###############################################################################
 ###############################################################################
-############################################################################### 
+###############################################################################
 
 
 #extracting randomized k-values for 10,000 member randomization
@@ -84,17 +91,17 @@ Ao_realvalues = data.A_o[:7].values
 #we are bootstrapping, allowing for values to get called more than once with numpy's random choice
 
 np.random.seed(0)
-rand_ki = np.array([np.random.choice(10) for i in xrange(number_of_samples)])
+rand_ki = np.array([np.random.choice(10) for i in range(number_of_samples)])
 
 np.random.seed(1)
-rand_kii = np.array([np.random.choice(10) for i in xrange(number_of_samples)])
+rand_kii = np.array([np.random.choice(10) for i in range(number_of_samples)])
 
 np.random.seed(2)
-rand_kiii = np.array([np.random.choice(10) for i in xrange(number_of_samples)])
+rand_kiii = np.array([np.random.choice(10) for i in range(number_of_samples)])
 
 #np.random.seed(3)
 #rand_kiiii = np.array([np.random.choice(1000) for i in xrange(number_of_samples)])
-    
+
 
 ki_randomized = ki_range[rand_ki]
 kii_randomized = kii_range[rand_kii]
@@ -104,32 +111,32 @@ kiii_randomized = kiii_range[rand_kiii]
 
 ###############################################################################
 ###############################################################################
-############################################################################### 
+###############################################################################
 
 
-#creating blank arrays to fill. 
+#creating blank arrays to fill.
 A_solutions = np.zeros((number_of_samples,7))
 B_solutions = np.zeros((number_of_samples,7))
 C_solutions = np.zeros((number_of_samples,7))
 D_solutions = np.zeros((number_of_samples,7))
+E_solutions = np.zeros((number_of_samples,7))
 
 for indexer, (ki, kii, kiii) in enumerate(zip(ki_randomized, kii_randomized, kiii_randomized)):
 
     for sec_indexer, (t, A_o) in enumerate(zip(time_values, Ao_realvalues)):
-    
+
         # we will only have 4 equations since we are ignoring back reations, so the reactions proceed from A->D
-    
+
         A = A_o * np.exp(-ki*t)
-        
-        
+
+
         B = np.divide((ki*A_o),(kii-ki)) * (np.exp(-ki*t)-np.exp(-kii*t))
-    
+
         #Subject to change, Natalia and Dimtry will check my math for these equations
-    
+
         C = np.divide((ki*A_o),(kii-ki)) * (((kiii-ki) * np.exp(-ki*t)) - ((kiii-kii) * np.exp(-kii*t)) + ((ki-kii) * np.exp(-kiii*t)))
-        
-        #MARIA'S COMMENT: Please double check bracket placements in equation for D!
-        
+        #MARIA'S COMMENT: Please double check bracket placements in equation for D! -- SRH they are correct
+
         D = np.divide((ki*A_o*kiii), (kii-ki)) * \
                       ((np.divide((kiii-ki),(-ki)) * np.exp(-ki*t)) - \
                        (np.divide((kiii-kii),(-kii)) * np.exp(-kii*t)) + \
@@ -138,14 +145,17 @@ for indexer, (ki, kii, kiii) in enumerate(zip(ki_randomized, kii_randomized, kii
                         (np.divide((kiii-ki),(-ki)) - \
                          np.divide((kiii-kii),(-kii)) + \
                          np.divide((ki-kii),(-kiii))))
-                    
+
+        E = A_o - A - B - C - D #Testing with E to see where an error might be in the equations
+
         A_solutions[indexer, sec_indexer] = A
         B_solutions[indexer, sec_indexer] = B
         C_solutions[indexer, sec_indexer] = C
         D_solutions[indexer, sec_indexer] = D
-        
+        E_solutions[indexer, sec_indexer] = E
 
-    print indexer
+
+    #print indexer
 
 
 #A_o = Tc = A + B + C + D
@@ -154,7 +164,7 @@ for indexer, (ki, kii, kiii) in enumerate(zip(ki_randomized, kii_randomized, kii
 
 ###############################################################################
 ###############################################################################
-###############################################################################  
+###############################################################################
 
 
 #verification later...
@@ -167,32 +177,34 @@ D_realvalues = data.D[:7].values
 
 ###############################################################################
 ###############################################################################
-###############################################################################  
+###############################################################################
 
 
 #make figure layout
 fig = plt.figure(figsize=(8.,4.))
 
 #set axes for the plot within the figure
-ax = fig.add_axes([0.0, 0., 1., 1.]) 
+ax = fig.add_axes([0.0, 0., 1., 1.])
 
-ls1, = ax.plot(time_values, Ao_realvalues, c='grey', zorder=1)
+ls1, = ax.plot(time_values, Ao_realvalues, c='black', zorder=6)
 
 for i in range(0,number_of_samples):
 
-    print i
-    
+    #print i
+
     #the line plots, time versus data
-    ls2, = ax.plot(time_values, A_solutions[i,:], c='goldenrod', zorder=2)
-    ls3, = ax.plot(time_values, B_solutions[i,:], c='chocolate', zorder=3)
-    ls4, = ax.plot(time_values, C_solutions[i,:], c='royalblue', zorder=4)
-    ls5, = ax.plot(time_values, D_solutions[i,:], c='dodgerblue', zorder=5)    
+    ls2, = ax.plot(time_values, A_solutions[i,:], c='grey', zorder=5)
+    ls3, = ax.plot(time_values, B_solutions[i,:], c='goldenrod', zorder=4)
+    ls4, = ax.plot(time_values, C_solutions[i,:], c='chocolate', zorder=3)
+    ls5, = ax.plot(time_values, D_solutions[i,:], c='royalblue', zorder=2)
+    #ls6, = ax.plot(time_values, E_solutions[i,:], c='dodgerblue', zorder=1)
 
     #the scatter points of data observations
-    ax.scatter(time_values, A_solutions[i,:], c='goldenrod', zorder=2)
-    ax.scatter(time_values, B_solutions[i,:], c='chocolate', zorder=3)
-    ax.scatter(time_values, C_solutions[i,:], c='royalblue', zorder=4)
-    ax.scatter(time_values, D_solutions[i,:], c='dodgerblue', zorder=5)
+    ax.scatter(time_values, A_solutions[i,:], c='grey', zorder=5)
+    ax.scatter(time_values, B_solutions[i,:], c='goldenrod', zorder=4)
+    ax.scatter(time_values, C_solutions[i,:], c='chocolate', zorder=3)
+    ax.scatter(time_values, D_solutions[i,:], c='royalblue', zorder=2)
+    #ax.scatter(time_values, E_solutions[i,:], c='dodgerblue', zorder=1)
 
 #force plot to not have any buffer space
 plt.margins(x=0, y=0)
@@ -201,9 +213,9 @@ plt.margins(x=0, y=0)
 ax.set_xlabel(r'Time (s; $ \times 10^{5}$)', fontsize=12, color='k')
 ax.set_ylabel(r'[Mo] ($\mu$m; $ \times 10^{-5}$)', fontsize=12, color='k')
 
-ax.legend([ls1, ls2, ls3, ls4, ls5],
-          ['MoO$_{4}$','MoO$_{3}$S','MoOS$_{3}$','MoO$_{2}$S$_{2}$','MoS$_{4}$'],
-                              loc='upper right',shadow=True, 
+ax.legend([ls1, ls2, ls3, ls4, ls5, ls6],
+          ['Mo$_{tot}$','MoO$_{4}$','MoO$_{3}$S','MoO$_{2}$S$_{2}$','MoOS$_{3}$', 'MoS$_{4}$'],
+                              loc='upper right',shadow=True,
           fancybox=True, ncol=2, fontsize=12, framealpha=1.)
 
 ax.set_xticks([0.,100000,200000,300000,400000])
@@ -215,14 +227,10 @@ ax.set_yticklabels(['0','1','2','3','4','5'], fontsize=12)
 ax.grid(which='major', axis='both', linestyle='--', alpha=0.5)
 
 #save your image
-plt.savefig('image_stephA.png', bbox_inches='tight', pad_inches=0.075, dpi=200)
+plt.savefig('image_stephA.png', bbox_inches='tight', pad_inches=0.075, dpi=200, alpha=0.004)
 plt.close()
 
 
 ###############################################################################
 ###############################################################################
-###############################################################################  
-
-
-
-  
+###############################################################################
