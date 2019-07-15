@@ -68,20 +68,22 @@ file2 = pd.read_excel('file2_stephan.xlsx', skiprows=1)
 
 file2 = file2.replace('ND', np.nan)
 
-data2 = xr.Dataset({'A_o':(['time'], file2['MoO4 (M)'].values),
-                    'A':(['time'], file2['MoO3S (M)'].values),
-                    'B':(['time'], file2['MoO2S2 (M)'].values),
-                    'C':(['time'], file2['MoOS3 (M)'].values),
-                    'D':(['time'], file2['MoS4 (M)'].values)},
-                    coords={'time':file2['time (s)'].values},
-                    attrs={'File Contents':'Isotope Data',
-                           'Data Owner':'Stephan Hlohowskyj',
-                           'Time Units':'Seconds (s)',
-                           'A_o':'MoO4',
-                           'A':'MoO3S',
-                           'B':'MoO2S2',
-                           'C':'MoOS3',
-                           'D':'MoS4'})
+data2 = xr.Dataset({'A':(['time'], file2['MoO4 (del)'].values),
+                   'B':(['time'], file2['MoO3S (del)'].values),
+                   'C':(['time'], file2['MoO2S2 (del)'].values),
+                   'D':(['time'], file2['MoOS3 (del)'].values),
+                   'E':(['time'], file2['MoS4 (del)'].values),
+                   'A_o':(['time'], file2['Mo_tot'].values)},
+                   coords={'time':file2['time (s)'].values},
+                   attrs={'File Contents':'Isotope Data',
+                          'Data Owner':'Stephan Hlohowskyj',
+                          'Time Units':'Seconds (s)',
+                          'A':'MoO4',
+                          'B':'MoO3S',
+                          'C':'MoO2S2',
+                          'D':'MoOS3',
+                          'E':'MoS4',
+                          'A_o':'Mo_tot'})
 
 data2.to_netcdf('file2_new_stephan.nc')
 
