@@ -1,4 +1,4 @@
-# Terminal Cheatsheet for Mac (Basics)
+# To Do List
 
 ------------
 
