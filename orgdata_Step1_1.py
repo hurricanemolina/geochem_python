@@ -28,7 +28,7 @@ import numpy as np
 
 #read the excel file
 #skipping the first row since we don't need it here
-file1 = pd.read_excel('file1_stephan.xlsx', skiprows=1)
+file1 = pd.read_excel('file1.xlsx', skiprows=1)
 
 #replace the ND string (no data) with np.nan (numpy's missing data way to allow
 #for vectorized operations [makes handling missing data easier for later computations])
@@ -53,7 +53,7 @@ data = xr.Dataset({'A':(['time'], file1['MoO4 (M)'].values),
                           'A_o':'Mo_tot'})
 
 #save the dataset into a netCDF file for later use in Step 1
-data.to_netcdf('file1_new_stephan.nc')
+data.to_netcdf('file1_new.nc')
 
 
 ##############################################################################
@@ -64,7 +64,7 @@ data.to_netcdf('file1_new_stephan.nc')
 #repeat steps above for file2 to create new netCDF file.
 #Will leave this section alone until we deal with the above data and get it working - SRH
 
-file2 = pd.read_excel('file2_stephan.xlsx', skiprows=1)
+file2 = pd.read_excel('file2.xlsx', skiprows=1)
 
 file2 = file2.replace('ND', np.nan)
 
@@ -85,7 +85,7 @@ data2 = xr.Dataset({'A':(['time'], file2['MoO4 (del)'].values),
                           'E':'MoS4',
                           'A_o':'Mo_tot'})
 
-data2.to_netcdf('file2_new_stephan.nc')
+data2.to_netcdf('file2_new.nc')
 
 
 ##############################################################################

@@ -40,20 +40,22 @@ number_of_samples = 100
 
 #k value ranges
 
+#MARIA'S QUESTION: do we no longer need kiiii? noticed we don't have this variable in equations.
+
 #k values are based on experiments in: Clarke et al (1987) Kinetics of the formation and hydrolysis
 #reaction of some thiomolybdate(VI) anions in aqueous solution. Inorg. Chim. Acta
 #and Harmer & Sykes (1980). Kinetics of the Interconversion of Sulfido- and
 #Oxomolybdate(VI) Species MoOxS4-x2- in Aqueous Solutions. Inorganic Chemistry
 
-ki_low = 9e-3 #k_{01}
-kii_low = 9e-4 #k_{12}
-kiii_low = 9e-5 #k_{23}
-kiiii_low = 2e-6 #K_{34}
+ki_low = 9e-5 #k_{01}
+kii_low = 9e-6 #k_{12}
+kiii_low = 9e-6 #k_{23}
+kiiii_low = 2e-5 #K_{34}
 
-ki_hi = 2e-3
-kii_hi = 2e-4
+ki_hi = 2e-4
+kii_hi = 2e-5
 kiii_hi = 2e-5
-kiiii_hi = 5e-6
+kiiii_hi = 5e-5
 
 
 
@@ -72,11 +74,27 @@ kiiii_range = np.linspace(kiiii_low,kiiii_hi,10)
 
 
 #import your data set in netcdf format
-data = xr.open_dataset('file2_new_stephan.nc', decode_cf=True)
+data = xr.open_dataset('file1_new_stephan.nc', decode_cf=True)
 
 #extract data variables and limit all the data to the first 7-time points.
-time_values = data.time[:7].values
-Ao_realvalues = data.A_o[:7].values
+#time_values = data.time[:7].values
+
+#make new normally spaced time steps to see if the graph will work at longer time_values
+def range_inc(start, stop, step, div):
+    i = start
+    calc = [0]
+    while i < stop:
+        calc.append((data.time[len(data.time)-1].values / ((stop - i) * div)))
+        i += step
+    return calc
+
+time_values = range_inc(0,100,1,10)
+
+Ao_realvalues = []
+for z in time_values:
+    Ao_realvalues.append(data.A_o[0].values)
+
+#Ao_realvalues = data.A_o[:9].values
 
 
 ###############################################################################
@@ -114,11 +132,11 @@ kiiii_randomized = kiiii_range[rand_kiiii]
 
 
 #creating blank arrays to fill.
-A_solutions = np.zeros((number_of_samples,7))
-B_solutions = np.zeros((number_of_samples,7))
-C_solutions = np.zeros((number_of_samples,7))
-D_solutions = np.zeros((number_of_samples,7))
-E_solutions = np.zeros((number_of_samples,7))
+A_solutions = np.zeros((number_of_samples, len(time_values)))
+B_solutions = np.zeros((number_of_samples, len(time_values)))
+C_solutions = np.zeros((number_of_samples, len(time_values)))
+D_solutions = np.zeros((number_of_samples, len(time_values)))
+E_solutions = np.zeros((number_of_samples, len(time_values)))
 
 for indexer, (ki, kii, kiii, kiiii) in enumerate(zip(ki_randomized, kii_randomized, kiii_randomized, kiiii_randomized)):
 
@@ -150,7 +168,7 @@ for indexer, (ki, kii, kiii, kiiii) in enumerate(zip(ki_randomized, kii_randomiz
                        (np.divide(1, ((kiii-kii)*(kiiii-kiii))) * np.exp(-kiiii*t)) + \
                        (np.divide(1, ((kiii-ki)*(kiiii-kiii))) * np.exp(-kiiii*t)))
 
-        E = A_o - A - B - C - D
+        E = (A_o - A - B - C - D) * 0.9
 
         '''
         E = np.divide((kiiii*kiii*kii*ki*A_o), (kii-ki))  * \
@@ -210,7 +228,7 @@ fig = plt.figure(figsize=(8.,4.))
 #set axes for the plot within the figure
 ax = fig.add_axes([0.0, 0., 1., 1.])
 
-ls1, = ax.plot(time_values, Ao_realvalues, c='black', zorder=6)
+#ls1, = ax.plot(time_values, Ao_realvalues, c='black', zorder=6)
 
 for i in range(0,number_of_samples):
 
@@ -222,14 +240,14 @@ for i in range(0,number_of_samples):
     ls4, = ax.plot(time_values, C_solutions[i,:], c='chocolate', zorder=3, alpha=0.3)
     ls5, = ax.plot(time_values, D_solutions[i,:], c='royalblue', zorder=2, alpha=0.3)
     ls6, = ax.plot(time_values, E_solutions[i,:], c='dodgerblue', zorder=1, alpha=0.3)
-
+'''
     #the scatter points of data observations
     ax.scatter(time_values, A_solutions[i,:], c='grey', zorder=5, alpha=0.1)
     ax.scatter(time_values, B_solutions[i,:], c='goldenrod', zorder=4, alpha=0.3)
     ax.scatter(time_values, C_solutions[i,:], c='chocolate', zorder=3, alpha=0.3)
     ax.scatter(time_values, D_solutions[i,:], c='royalblue', zorder=2, alpha=0.3)
     ax.scatter(time_values, E_solutions[i,:], c='dodgerblue', zorder=1,  alpha=0.3)
-
+'''
 #force plot to not have any buffer space
 plt.margins(x=0, y=0)
 
@@ -243,22 +261,23 @@ line3 = pylab.Line2D(range(10),range(10),marker="_",linewidth=2.0,color="chocola
 line4 = pylab.Line2D(range(10),range(10),marker="_",linewidth=2.0,color="royalblue",alpha=1.0)
 line5 = pylab.Line2D(range(10),range(10),marker="_",linewidth=2.0,color="dodgerblue",alpha=1.0)
 
-ax.legend([ls1, line1, line2, line3, line4, line5],
-          ['Mo$_{tot}$','MoO$_{4}$','MoO$_{3}$S','MoO$_{2}$S$_{2}$','MoOS$_{3}$', 'MoS$_{4}$'],
+ax.legend([line1, line2, line3, line4, line5],
+          ['MoO$_{4}$','MoO$_{3}$S','MoO$_{2}$S$_{2}$','MoOS$_{3}$', 'MoS$_{4}$'],
                               loc='upper right',
           fancybox=True, ncol=2, fontsize=12, framealpha=0.9)
 
-ax.set_xticks([0.,100000,200000,300000,400000])
-ax.set_xticklabels(['0','1','2','3','4'], fontsize=12)
+ax.set_xticks([0.,100000,200000,300000,400000,500000,600000,700000,800000,900000,1000000, \
+1100000,1200000,1300000,1400000,1500000,1600000,1700000,1800000,1900000,2000000])
+ax.set_xticklabels(['0','1','2','3','4','5','6','7','8','9','10','11','12','13','14','15','16','17','18','19','20'], fontsize=12)
 
-#ax.set_yticks([0.,0.00001,0.00002,0.00003,0.00004,0.00005])
-#ax.set_yticklabels(['0','1','2','3','4','5'], fontsize=12)
+ax.set_yticks([0.,0.00001,0.00002,0.00003,0.00004,0.00005])
+ax.set_yticklabels(['0','1','2','3','4','5'], fontsize=12)
 
 ax.grid(which='major', axis='both', linestyle='--', alpha=0.5)
 
 #save your image
-plt.savefig('image_stephB.png', bbox_inches='tight', pad_inches=0.075, dpi=200, alpha=0.004)
-#plt.show()
+plt.savefig('image_stephA.png', bbox_inches='tight', pad_inches=0.075, dpi=200, alpha=0.004)
+plt.show()
 plt.close()
 
 
