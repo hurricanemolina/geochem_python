@@ -48,14 +48,14 @@ number_of_samples = 100
 #Oxomolybdate(VI) Species MoOxS4-x2- in Aqueous Solutions. Inorganic Chemistry
 
 ki_low = 9e-5 #k_{01}
-kii_low = 9e-6 #k_{12}
-kiii_low = 9e-6 #k_{23}
-kiiii_low = 2e-5 #K_{34}
+kii_low = 4e-6 #k_{12}
+kiii_low = 9e-7 #k_{23}
+kiiii_low = 8e-7 #K_{34}
 
 ki_hi = 2e-4
-kii_hi = 2e-5
-kiii_hi = 2e-5
-kiiii_hi = 5e-5
+kii_hi = 9e-6
+kiii_hi = 2e-6
+kiiii_hi = 2e-6
 
 
 
@@ -84,7 +84,7 @@ def range_inc(start, stop, step, div):
     i = start
     calc = [0]
     while i < stop:
-        calc.append((data.time[len(data.time)-1].values / ((stop - i) * div)))
+        calc.append((data.time[len(data.time)-2].values / ((stop - i) * div)))
         i += step
     return calc
 
@@ -142,21 +142,17 @@ for indexer, (ki, kii, kiii, kiiii) in enumerate(zip(ki_randomized, kii_randomiz
 
     for sec_indexer, (t, A_o) in enumerate(zip(time_values, Ao_realvalues)):
 
-        # we will only have 4 equations since we are ignoring back reations, so the reactions proceed from A->D
-
         A = A_o * np.exp(-ki*t)
 
 
         B = np.divide((ki*A_o),(kii-ki)) * (np.exp(-ki*t)-np.exp(-kii*t))
 
-        #Subject to change, Natalia and Dimtry will check my math for these equations
 
         C = (np.divide((kii*ki*A_o),(kii-ki)) * \
                     ((np.divide(1,(kiii-ki)) * np.exp(-ki*t)) - \
                     (np.divide(1,(kiii-kii)) * (np.exp(-kii*t))) + \
                     (np.divide(1 ,(kiii-kii)) * (np.exp(-kiii*t))) - \
                     (np.divide(1 ,(kiii-ki)) * (np.exp(-kiii*t)))))
-        #MARIA'S COMMENT: Please double check bracket placements in equation for D! -- SRH they are correct
 
         D = np.divide((kiii*kii*ki*A_o), (kii-ki))  * \
                       ((np.divide(1, ((kiii-ki)*(kiiii-ki))) * np.exp(-ki*t)) - \
@@ -168,41 +164,24 @@ for indexer, (ki, kii, kiii, kiiii) in enumerate(zip(ki_randomized, kii_randomiz
                        (np.divide(1, ((kiii-kii)*(kiiii-kiii))) * np.exp(-kiiii*t)) + \
                        (np.divide(1, ((kiii-ki)*(kiiii-kiii))) * np.exp(-kiiii*t)))
 
-        E = (A_o - A - B - C - D) * 0.9
+        #E = (-A_o + (A_o - A - B - C - D))
 
-        '''
-        E = np.divide((kiiii*kiii*kii*ki*A_o), (kii-ki))  * \
-                      ((np.divide(1, ((kiii-ki)*(kiiii-ki)*(-ki))) * np.exp(-ki*t)) - \
-                       (np.divide(1, ((kiii-kii)*(kiiii-kii)*(-kii))) * np.exp(-kii*t)) + \
-                       (np.divide(1, ((kiii-kii)*(kiiii-kiii)*(-kiii))) * np.exp(-kiii*t)) - \
-                       (np.divide(1, ((kiii-ki)*(kiiii-kiii)*(-kiii))) * np.exp(-kiii*t)) - \
-                       (np.divide(1, ((kiii-ki)*(kiiii-ki)*(-kiiii))) * np.exp(-kiiii*t)) + \
-                       (np.divide(1, ((kiii-kii)*(kiiii-kii)*(-kiiii))) * np.exp(-kiiii*t)) - \
-                       (np.divide(1, ((kiii-kii)*(kiiii-kiii)*(-kiiii))) * np.exp(-kiiii*t)) + \
-                       (np.divide(1, ((kiii-ki)*(kiiii-kiii)*(-kiiii))) * np.exp(-kiiii*t)) - \
-                       np.divide(1, ((kiii-ki)*(kiiii-ki)*(-ki))) + \
-                       np.divide(1, ((kiii-kii)*(kiiii-kii)*(-kii))) - \
-                       np.divide(1, ((kiii-kii)*(kiiii-kiii)*(-kiii))) + \
-                       np.divide(1, ((kiii-ki)*(kiiii-kiii)*(-kiii))) + \
-                       np.divide(1, ((kiii-ki)*(kiiii-ki)*(-kiiii))) - \
-                       np.divide(1, ((kiii-kii)*(kiiii-kii)*(-kiiii))) + \
-                       np.divide(1, ((kiii-kii)*(kiiii-kiii)*(-kiiii))) - \
-                       np.divide(1, ((kiii-kii)*(kiiii-kiii)*(-kiiii))))
-        '''
+        E = A_o + (np.divide((kiiii*kiii*kii*ki*A_o), (kii-ki)) * \
+                       (np.divide(np.exp(-ki*t), ((kiii-ki)*(kiiii-ki)*-ki)) - \
+                       np.divide(np.exp(-kii*t), ((kiii-kii)*(kiiii-kii)*-kii)) + \
+                       np.divide(np.exp(-kiii*t), ((kiii-kii)*(kiiii-kiii)*-kiii)) - \
+                       np.divide(np.exp(-kiii*t), ((kiii-ki)*(kiiii-kiii)*-kiii)) - \
+                       np.divide(np.exp(-kiiii*t), ((kiii-ki)*(kiiii-ki)*-kiiii)) + \
+                       np.divide(np.exp(-kiiii*t), ((kiii-kii)*(kiiii-kii)*-kiiii)) - \
+                       np.divide(np.exp(-kiiii*t), ((kiii-kii)*(kiiii-kiii)*-kiiii)) + \
+                       np.divide(np.exp(-kiiii*t), ((kiii-ki)*(kiiii-kiii)*-kiiii))))
+
 
         A_solutions[indexer, sec_indexer] = A
         B_solutions[indexer, sec_indexer] = B
         C_solutions[indexer, sec_indexer] = C
         D_solutions[indexer, sec_indexer] = D
         E_solutions[indexer, sec_indexer] = E
-
-
-    #print indexer
-
-
-#A_o = Tc = A + B + C + D
-
-
 
 ###############################################################################
 ###############################################################################
@@ -266,17 +245,20 @@ ax.legend([line1, line2, line3, line4, line5],
                               loc='upper right',
           fancybox=True, ncol=2, fontsize=12, framealpha=0.9)
 
+ax.set_xticks([0.,100000,200000,300000,400000,500000])
+ax.set_xticklabels(['0','1','2','3','4','5'], fontsize=12)
+'''
 ax.set_xticks([0.,100000,200000,300000,400000,500000,600000,700000,800000,900000,1000000, \
 1100000,1200000,1300000,1400000,1500000,1600000,1700000,1800000,1900000,2000000])
 ax.set_xticklabels(['0','1','2','3','4','5','6','7','8','9','10','11','12','13','14','15','16','17','18','19','20'], fontsize=12)
-
+'''
 ax.set_yticks([0.,0.00001,0.00002,0.00003,0.00004,0.00005])
 ax.set_yticklabels(['0','1','2','3','4','5'], fontsize=12)
 
 ax.grid(which='major', axis='both', linestyle='--', alpha=0.5)
 
 #save your image
-plt.savefig('image_stephA.png', bbox_inches='tight', pad_inches=0.075, dpi=200, alpha=0.004)
+plt.savefig('image_A.png', bbox_inches='tight', pad_inches=0.075, dpi=200, alpha=0.004)
 plt.show()
 plt.close()
 
