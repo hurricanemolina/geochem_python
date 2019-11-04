@@ -30,7 +30,7 @@ import pylab
 ###############################################################################
 
 
-number_of_samples = 1
+number_of_samples = 10
 
 
 ###############################################################################
@@ -89,13 +89,72 @@ def range_inc(start, stop, step, div):
         i += step
     return calc
 
-time_values = range_inc(0,100,1,10)
-
-Ao_realvalues = []
-for z in time_values:
-    Ao_realvalues.append(data.A_o[0].values)
+time_values = range_inc(0,1000,1,10)
 
 #Ao_realvalues = data.A_o[:9].values
+
+###############################################################################
+###############################################################################
+###############################################################################
+
+
+#Create functions to be called to compute the different chemical parameters
+
+def Mo_solver(Sig_S, eq, gtlt):
+    A = A_o * np.exp(-ki*t)
+         #K_a = (A * DEL_S) / ((A_o-A) * S_tot)
+         #isoA = (K_a - 1) * 1000
+    DEL_S = Sig_S
+    B = np.divide((ki*A_o),(kii-ki)) * (np.exp(-ki*t)-np.exp(-kii*t))
+    K_b = (B*DEL_S) / (A * S_tot)
+    isoB = (K_b - 1) * 1000
+
+    C = (np.divide((kii*ki*A_o),(kii-ki)) * \
+        ((np.divide(1,(kiii-ki)) * np.exp(-ki*t)) - \
+        (np.divide(1,(kiii-kii)) * (np.exp(-kii*t))) + \
+        (np.divide(1 ,(kiii-kii)) * (np.exp(-kiii*t))) - \
+        (np.divide(1 ,(kiii-ki)) * (np.exp(-kiii*t)))))
+    #K_c = (C*DEL_S) / (B * S_tot)
+    #isoC = (K_c - 1) * 1000
+    #DEL_S = Sig_S - (B + C)
+
+    D = np.divide((kiii*kii*ki*A_o), (kii-ki))  * \
+        ((np.divide(1, ((kiii-ki)*(kiiii-ki))) * np.exp(-ki*t)) - \
+        (np.divide(1, ((kiii-kii)*(kiiii-kii))) * np.exp(-kii*t)) + \
+        (np.divide(1, ((kiii-kii)*(kiiii-kiii))) * np.exp(-kiii*t)) - \
+        (np.divide(1, ((kiii-ki)*(kiiii-kiii))) * np.exp(-kiii*t)) - \
+        (np.divide(1, ((kiii-ki)*(kiiii-ki))) * np.exp(-kiiii*t)) + \
+        (np.divide(1, ((kiii-kii)*(kiiii-kii))) * np.exp(-kiiii*t)) - \
+        (np.divide(1, ((kiii-kii)*(kiiii-kiii))) * np.exp(-kiiii*t)) + \
+        (np.divide(1, ((kiii-ki)*(kiiii-kiii))) * np.exp(-kiiii*t)))
+    #K_d = (D *DEL_S) / (C )
+    #isoD = (K_d - 1) * 100
+    #DEL_S = Sig_S - (B + C + D)
+
+    #E = (A_o - A - B - C - D)
+    E = A_o + (np.divide((kiiii*kiii*kii*ki*A_o), (kii-ki)) * \
+        (np.divide(np.exp(-ki*t), ((kiii-ki)*(kiiii-ki)*-ki)) - \
+        np.divide(np.exp(-kii*t), ((kiii-kii)*(kiiii-kii)*-kii)) + \
+        np.divide(np.exp(-kiii*t), ((kiii-kii)*(kiiii-kiii)*-kiii)) - \
+        np.divide(np.exp(-kiii*t), ((kiii-ki)*(kiiii-kiii)*-kiii)) - \
+        np.divide(np.exp(-kiiii*t), ((kiii-ki)*(kiiii-ki)*-kiiii)) + \
+        np.divide(np.exp(-kiiii*t), ((kiii-kii)*(kiiii-kii)*-kiiii)) - \
+        np.divide(np.exp(-kiiii*t), ((kiii-kii)*(kiiii-kiii)*-kiiii)) + \
+        np.divide(np.exp(-kiiii*t), ((kiii-ki)*(kiiii-kiii)*-kiiii))))
+    #DEL_S = Sig_S - (B + C + D + E)
+
+    #K_e = K_d
+    #isoE = (K_e - 1) * 1000
+    if eq == 1:
+        return A
+    if eq == 2:
+        return B
+    if eq == 3:
+        return C
+    if eq == 4:
+        return D
+    else:
+        return E
 
 
 ###############################################################################
@@ -108,6 +167,27 @@ for z in time_values:
 #we are setting a seed for randomization for testing and ensuring we get same random results every time.
 #we are bootstrapping, allowing for values to get called more than once with numpy's random choice
 
+#get input from user to sulfide values
+User_Mo = float(input('estimated total Mo conc.?  '))
+User_Sulfide = float(input('estimated sulfide value?  '))
+User_pH = int(input('estimated pH value?  '))
+
+Ao_realvalues = []
+for z in time_values:
+    Ao_realvalues.append(User_Mo)
+
+if User_pH < 7:
+    ki_range = ki_range * 2
+    kii_range = kii_range * 2
+    kiii_range = kiii_range * 2
+    kiiii_range = kiiii_range * 2
+
+if User_pH > 7:
+    ki_range = ki_range / 2
+    kii_range = kii_range / 2
+    kiii_range = kiii_range / 2
+    kiiii_range = kiiii_range / 2
+
 np.random.seed(0)
 rand_ki = np.array([np.random.choice(10) for i in range(number_of_samples)])
 
@@ -119,7 +199,6 @@ rand_kiii = np.array([np.random.choice(10) for i in range(number_of_samples)])
 
 np.random.seed(3)
 rand_kiiii = np.array([np.random.choice(10) for i in range(number_of_samples)])
-
 
 ki_randomized = ki_range[rand_ki]
 kii_randomized = kii_range[rand_kii]
@@ -142,93 +221,88 @@ E_solutions = np.zeros((number_of_samples, len(time_values)))
 R = 8.314
 T = 298
 DEL_G = -33
-teste = np.exp(-DEL_G / (R*T))
+DEL_sigS = 0
+S_tot = 5e-5 * 10
+
+#add noise to the sulfide values
+Sulfide_low = User_Sulfide / 1.1
+Sulfide_high = User_Sulfide * 1.1
+Rand_Sulfide = np.array([np.random.uniform(Sulfide_low, Sulfide_high) for i in range(number_of_samples)])
+#np.arange(Sulfide_low, Sulfide_high)
+
+checker = True
+sul_ck = True
+#DEL_sigS = np.array(np.nan() for i in range(number_of_samples))
+B_switch = 1
+C_switch = 1
+D_switch = 1
+E_switch = 1
+
 
 for indexer, (ki, kii, kiii, kiiii) in enumerate(zip(ki_randomized, kii_randomized, kiii_randomized, kiiii_randomized)):
 
     for sec_indexer, (t, A_o) in enumerate(zip(time_values, Ao_realvalues)):
 
-        # convert values to isotopic signature using Tossel 2005 (100/92)Mo = (K - 1) * 10^3
-        S_tot = A_o * 10 # conc of total sulfide used in experiments
-        A = A_o * np.exp(-ki*t)
-        DEL_S = S_tot - A # total sulfide minus the amount consumed in the reaction with Mo
-        K_a = (A * DEL_S) / ((A_o-A) * S_tot)
-        isoA = (K_a - 1) * 1000
-
-        #print(A,K_a,isoA)
-
-        B = np.divide((ki*A_o),(kii-ki)) * (np.exp(-ki*t)-np.exp(-kii*t))
-        DEL_S = S_tot - A + B # total sulfide minus the amount consumed in the reaction with Mo
-        K_b = (B*DEL_S) / (A * S_tot)
-        isoB = (K_b - 1) * 1000
-        print(B,K_b,isoB)
-
-        C = (np.divide((kii*ki*A_o),(kii-ki)) * \
-                    ((np.divide(1,(kiii-ki)) * np.exp(-ki*t)) - \
-                    (np.divide(1,(kiii-kii)) * (np.exp(-kii*t))) + \
-                    (np.divide(1 ,(kiii-kii)) * (np.exp(-kiii*t))) - \
-                    (np.divide(1 ,(kiii-ki)) * (np.exp(-kiii*t)))))
-
-        DEL_S = S_tot - A + B + C
-        K_c = (C*DEL_S) / (B * S_tot)
-        isoC = (K_c - 1) * 1000
-
-        D = np.divide((kiii*kii*ki*A_o), (kii-ki))  * \
-                      ((np.divide(1, ((kiii-ki)*(kiiii-ki))) * np.exp(-ki*t)) - \
-                       (np.divide(1, ((kiii-kii)*(kiiii-kii))) * np.exp(-kii*t)) + \
-                       (np.divide(1, ((kiii-kii)*(kiiii-kiii))) * np.exp(-kiii*t)) - \
-                       (np.divide(1, ((kiii-ki)*(kiiii-kiii))) * np.exp(-kiii*t)) - \
-                       (np.divide(1, ((kiii-ki)*(kiiii-ki))) * np.exp(-kiiii*t)) + \
-                       (np.divide(1, ((kiii-kii)*(kiiii-kii))) * np.exp(-kiiii*t)) - \
-                       (np.divide(1, ((kiii-kii)*(kiiii-kiii))) * np.exp(-kiiii*t)) + \
-                       (np.divide(1, ((kiii-ki)*(kiiii-kiii))) * np.exp(-kiiii*t)))
-
-        DEL_S = S_tot - A + B + C + D
-        K_d = (D *DEL_S) / (C * S_tot)
-        isoD = (K_d - 1) * 100
-
-        E = (A_o - A - B - C - D)
-        K_e = K_d
-        isoE = (K_e - 1) * 1000
-
-        '''
-        E = np.divide((kiiii*kiii*kii*ki*A_o), (kii-ki))  * \
-                      ((np.divide(1, ((kiii-ki)*(kiiii-ki)*(-ki))) * np.exp(-ki*t)) - \
-                       (np.divide(1, ((kiii-kii)*(kiiii-kii)*(-kii))) * np.exp(-kii*t)) + \
-                       (np.divide(1, ((kiii-kii)*(kiiii-kiii)*(-kiii))) * np.exp(-kiii*t)) - \
-                       (np.divide(1, ((kiii-ki)*(kiiii-kiii)*(-kiii))) * np.exp(-kiii*t)) - \
-                       (np.divide(1, ((kiii-ki)*(kiiii-ki)*(-kiiii))) * np.exp(-kiiii*t)) + \
-                       (np.divide(1, ((kiii-kii)*(kiiii-kii)*(-kiiii))) * np.exp(-kiiii*t)) - \
-                       (np.divide(1, ((kiii-kii)*(kiiii-kiii)*(-kiiii))) * np.exp(-kiiii*t)) + \
-                       (np.divide(1, ((kiii-ki)*(kiiii-kiii)*(-kiiii))) * np.exp(-kiiii*t)) - \
-                       np.divide(1, ((kiii-ki)*(kiiii-ki)*(-ki))) + \
-                       np.divide(1, ((kiii-kii)*(kiiii-kii)*(-kii))) - \
-                       np.divide(1, ((kiii-kii)*(kiiii-kiii)*(-kiii))) + \
-                       np.divide(1, ((kiii-ki)*(kiiii-kiii)*(-kiii))) + \
-                       np.divide(1, ((kiii-ki)*(kiiii-ki)*(-kiiii))) - \
-                       np.divide(1, ((kiii-kii)*(kiiii-kii)*(-kiiii))) + \
-                       np.divide(1, ((kiii-kii)*(kiiii-kiii)*(-kiiii))) - \
-                       np.divide(1, ((kiii-kii)*(kiiii-kiii)*(-kiiii))))
-        '''
-
-        A_solutions[indexer, sec_indexer] = isoA
-        B_solutions[indexer, sec_indexer] = isoB
-        C_solutions[indexer, sec_indexer] = isoC
-        D_solutions[indexer, sec_indexer] = isoD
-        E_solutions[indexer, sec_indexer] = isoE
-
-
-    #print indexer
-
-
-#A_o = Tc = A + B + C + D
-
-
+        A_solutions[indexer, sec_indexer] = Mo_solver(Rand_Sulfide[indexer], 1, sul_ck)
+        B_solutions[indexer, sec_indexer] = Mo_solver(Rand_Sulfide[indexer], 2, sul_ck)
+        C_solutions[indexer, sec_indexer] = Mo_solver(Rand_Sulfide[indexer], 3, sul_ck)
+        D_solutions[indexer, sec_indexer] = Mo_solver(Rand_Sulfide[indexer], 4, sul_ck)
+        E_solutions[indexer, sec_indexer] = Mo_solver(Rand_Sulfide[indexer], 5, sul_ck)
 
 ###############################################################################
 ###############################################################################
 ###############################################################################
 
+#repeat the loops to calculate sulide consumed, truncate data accordingly
+
+Species_cutoff = np.zeros((number_of_samples, len(time_values)))
+
+#Check if the species is decreasing, don't double count moles of sulfide consumed
+
+for Sindexer, Svalue in enumerate(Rand_Sulfide):
+    #find the index of the max value for each species
+    B_idxmax = B_solutions[Sindexer].argmax()
+    C_idxmax = C_solutions[Sindexer].argmax()
+    D_idxmax = D_solutions[Sindexer].argmax()
+    E_idxmax = E_solutions[Sindexer].argmax()
+    #calculate the end point of sulfide
+    i=0
+    checker = True
+    while i < B_idxmax and checker == True:
+        DEL_sigS = Rand_Sulfide[Sindexer] - B_solutions[Sindexer][i] - C_solutions[Sindexer][i] - D_solutions[Sindexer][i] - E_solutions[Sindexer][i]
+        if DEL_sigS <= 0:
+            print('B species', i, Sindexer)
+            #Species_cutoff[Sindexer, i] = 0
+            checker = False
+        i += 1
+    i = 0
+    while i < C_idxmax and checker == True:
+        DEL_sigS = Rand_Sulfide[Sindexer] - B_solutions[Sindexer][i] - C_solutions[Sindexer][i] - D_solutions[Sindexer][i] - E_solutions[Sindexer][i]
+        if DEL_sigS <= 0:
+            print('C_species', i, Sindexer)
+            checker = False
+        i+=1
+    i = 0
+    while i < D_idxmax and checker == True:
+        DEL_sigS = Rand_Sulfide[Sindexer] - B_solutions[Sindexer][i] - C_solutions[Sindexer][i] - D_solutions[Sindexer][i] - E_solutions[Sindexer][i]
+        if DEL_sigS <= 0:
+            print('D_species', i, Sindexer)
+            checker = False
+        i+=1
+    i = 0
+    while i < D_idxmax and checker == True:
+        DEL_sigS = Rand_Sulfide[Sindexer] - B_solutions[Sindexer][i] - C_solutions[Sindexer][i] - D_solutions[Sindexer][i] - E_solutions[Sindexer][i]
+        if DEL_sigS <= 0:
+            print('E_species', i, Sindexer)
+            checker = False
+        i += 1
+    if checker == True:
+        print('all_species', Sindexer)
+
+
+###############################################################################
+###############################################################################
+###############################################################################
 
 #verification later...
 '''
@@ -251,27 +325,26 @@ ax = fig.add_axes([0.0, 0., 1., 1.])
 
 #ls1, = ax.plot(time_values, Ao_realvalues, c='black', zorder=6)
 
-#for i in range(0,number_of_samples):
+for i in range(0,number_of_samples):
 
     #print i
-'''
+
     #the line plots, time versus data
     ls2, = ax.plot(time_values, A_solutions[i,:], c='grey', zorder=5, alpha=0.3)
     ls3, = ax.plot(time_values, B_solutions[i,:], c='goldenrod', zorder=4, alpha=0.3)
     ls4, = ax.plot(time_values, C_solutions[i,:], c='chocolate', zorder=3, alpha=0.3)
     ls5, = ax.plot(time_values, D_solutions[i,:], c='royalblue', zorder=2, alpha=0.3)
     ls6, = ax.plot(time_values, E_solutions[i,:], c='dodgerblue', zorder=1, alpha=0.3)
-
+'''
     #the scatter points of data observations
     ax.scatter(time_values, A_solutions[i,:], c='grey', zorder=5, alpha=0.1)
     ax.scatter(time_values, B_solutions[i,:], c='goldenrod', zorder=4, alpha=0.3)
     ax.scatter(time_values, C_solutions[i,:], c='chocolate', zorder=3, alpha=0.3)
     ax.scatter(time_values, D_solutions[i,:], c='royalblue', zorder=2, alpha=0.3)
     ax.scatter(time_values, E_solutions[i,:], c='dodgerblue', zorder=1,  alpha=0.3)
-
+'''
 #force plot to not have any buffer space
-#plt.margins(x=0, y=0)
-
+plt.margins(x=0, y=0)
 
 ax.set_xlabel(r'Time (s; $ \times 10^{5}$)', fontsize=12, color='k')
 ax.set_ylabel(r'[Mo] ($\mu$m; $ \times 10^{-5}$)', fontsize=12, color='k')
@@ -293,17 +366,23 @@ ax.set_xticklabels(['0','1','2','3','4','5','6','7','8','9','10','11','12','13',
 
 ax.set_yticks([0.,0.00001,0.00002,0.00003,0.00004,0.00005])
 ax.set_yticklabels(['0','1','2','3','4','5'], fontsize=12)
-'''
+
 #ax.grid(which='major', axis='both', linestyle='--', alpha=0.5)
 
-#save your image
-plt.plot(time_values, A_solutions[0], c='grey', zorder=5, alpha=0.3)
-plt.plot(time_values, B_solutions[0], c='goldenrod', zorder=4, alpha=0.3)
-plt.plot(time_values, C_solutions[0], c='chocolate', zorder=3, alpha=0.3)
-plt.plot(time_values, D_solutions[0], c='royalblue', zorder=2, alpha=0.3)
-plt.plot(time_values, E_solutions[0], c='dodgerblue', zorder=1, alpha=0.3)
-
 plt.savefig('image_iso.png', bbox_inches='tight', pad_inches=0.075, dpi=200, alpha=0.004)
+plt.show()
+plt.close()
+
+time_hours = time_values
+#save your image
+#plt.plot(time_values, A_solutions[0], c='grey', zorder=5, alpha=0.3)
+plt.plot(time_hours[:50], -np.log(B_solutions[0][:50]), c='goldenrod', zorder=4, alpha=1)
+#plt.plot(time_hours[:50], np.log(C_solutions[0][:50]), c='chocolate', zorder=3, alpha=1)
+plt.plot(time_hours[:50], -np.log(D_solutions[0][:50]), c='royalblue', zorder=2, alpha=1)
+#plt.plot(time_hours[50:], np.log(E_solutions[0][50:]), c='dodgerblue', zorder=1, alpha=1)
+
+
+plt.savefig('ln_C.png', bbox_inches='tight', pad_inches=0.075, dpi=200, alpha=0.004)
 plt.show()
 plt.close()
 
