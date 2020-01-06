@@ -88,7 +88,8 @@ def range_inc(start, stop, step, div):
         i += step
     return calc
 
-time_values = range_inc(0,100,1,10)
+#time_values = range_inc(0,100,1,10)
+time_values = np.linspace(0, 500000, 1000)[0:]
 
 Ao_realvalues = []
 for z in time_values:
@@ -119,17 +120,14 @@ rand_kiii = np.array([np.random.choice(10) for i in range(number_of_samples)])
 np.random.seed(3)
 rand_kiiii = np.array([np.random.choice(10) for i in range(number_of_samples)])
 
-
 ki_randomized = ki_range[rand_ki]
 kii_randomized = kii_range[rand_kii]
 kiii_randomized = kiii_range[rand_kiii]
 kiiii_randomized = kiiii_range[rand_kiiii]
 
-
 ###############################################################################
 ###############################################################################
 ###############################################################################
-
 
 #creating blank arrays to fill.
 A_solutions = np.zeros((number_of_samples, len(time_values)))
@@ -214,11 +212,11 @@ for i in range(0,number_of_samples):
     #print i
 
     #the line plots, time versus data
-    ls2, = ax.plot(time_values, A_solutions[i,:], c='grey', zorder=5, alpha=0.3)
-    ls3, = ax.plot(time_values, B_solutions[i,:], c='goldenrod', zorder=4, alpha=0.3)
-    ls4, = ax.plot(time_values, C_solutions[i,:], c='chocolate', zorder=3, alpha=0.3)
-    ls5, = ax.plot(time_values, D_solutions[i,:], c='royalblue', zorder=2, alpha=0.3)
-    ls6, = ax.plot(time_values, E_solutions[i,:], c='dodgerblue', zorder=1, alpha=0.3)
+    ls2, = ax.plot(time_values[:], A_solutions[i,:], c='grey', zorder=5, alpha=0.3)
+    ls3, = ax.plot(time_values[:], B_solutions[i,:], c='goldenrod', zorder=4, alpha=0.3)
+    ls4, = ax.plot(time_values[:], C_solutions[i,:], c='chocolate', zorder=3, alpha=0.3)
+    ls5, = ax.plot(time_values[:], D_solutions[i,:], c='royalblue', zorder=2, alpha=0.3)
+    ls6, = ax.plot(time_values[:], E_solutions[i,:], c='dodgerblue', zorder=1, alpha=0.3)
 '''
     #the scatter points of data observations
     ax.scatter(time_values, A_solutions[i,:], c='grey', zorder=5, alpha=0.1)
@@ -260,7 +258,7 @@ ax.grid(which='major', axis='both', linestyle='--', alpha=0.5)
 #save your image
 plt.savefig('image_A.png', bbox_inches='tight', pad_inches=0.075, dpi=200, alpha=0.004)
 plt.show()
-plt.close()
+#plt.close()
 
 
 ###############################################################################
