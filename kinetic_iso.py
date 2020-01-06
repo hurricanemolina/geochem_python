@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
 Created on Sun Jan 21 01:29:09 2018
@@ -14,10 +14,6 @@ Dr. Maria J. Molina
 ###############################################################################
 ###############################################################################
 ###############################################################################
-
-
-#this import needed for me because I am still using python version 2.7...
-from __future__ import division
 
 import numpy as np
 import xarray as xr
@@ -87,29 +83,8 @@ del_E = -0.32
 ###############################################################################
 ###############################################################################
 
-
-#import your data set in netcdf format
-data = xr.open_dataset('file1_new.nc', decode_cf=True)
-data2 = xr.open_dataset('file2_new.nc', decode_cf=True)
-
-#extract data variables and limit all the data to the first 7-time points.
-#time_values = data.time[:7].values
-
-#make new normally spaced time steps to see if the graph will work at longer time_values
-def range_inc(start, stop, step, div):
-    i = start
-    calc = []
-    #calc = np.linspace(start, data.time[len(data.time)-1].values, step)
-    #retun np.linspace(0, data.time[len(data.time)-1], 999+1)[1:]
-    while i < stop:
-        calc.append((data.time[len(data.time)-1].values / ((stop - i) * div)))
-        i += step
-    return calc
-
 #time_values = range_inc(0,1000,1,10)
 time_values = np.linspace(0, 500000, 1000)[0:]
-
-#Ao_realvalues = data.A_o[:9].values
 
 ###############################################################################
 ###############################################################################
@@ -118,34 +93,19 @@ time_values = np.linspace(0, 500000, 1000)[0:]
 #Create functions to be called to compute the different chemical parameters
 
 def Mo_solver(Sig_S, eq, divtime, min, max):
-    A = A_o * np.exp(-ki*divtime)
-    if A < min:
-        A = min
-    if A > max:
-        A = max
-         #K_a = (A * DEL_S) / ((A_o-A) * S_tot)
-         #isoA = (K_a - 1) * 1000
-    #DEL_S = Sig_S
+    A = A_o * np.exp(-ki*divtime)+min
 
-    B = np.divide((ki*A_o),(kii-ki)) * (np.exp(-ki*divtime)-np.exp(-kii*divtime))
-    if B < min:
-        B = min
-    if B > max:
-        B = max
-    #K_b = (B*DEL_S) / (A * S_tot)
-    #isoB = (K_b - 1) * 1000
+    B = min + np.divide((ki*A_o),(kii-ki)) * (np.exp(-ki*divtime)-np.exp(-kii*divtime))
+    if B < (2*min):
+        B += min
 
-    C = (np.divide((kii*ki*A_o),(kii-ki)) * \
+    C = min + (np.divide((kii*ki*A_o),(kii-ki)) * \
         ((np.divide(1,(kiii-ki)) * np.exp(-ki*divtime)) - \
         (np.divide(1,(kiii-kii)) * (np.exp(-kii*divtime))) + \
         (np.divide(1 ,(kiii-kii)) * (np.exp(-kiii*divtime))) - \
         (np.divide(1 ,(kiii-ki)) * (np.exp(-kiii*divtime)))))
-    if C < min:
-        C = min
-    if C > max:
-        C = max
 
-    D = np.divide((kiii*kii*ki*A_o), (kii-ki))  * \
+    D = min + np.divide((kiii*kii*ki*A_o), (kii-ki))  * \
         ((np.divide(1, ((kiii-ki)*(kiiii-ki))) * np.exp(-ki*divtime)) - \
         (np.divide(1, ((kiii-kii)*(kiiii-kii))) * np.exp(-kii*divtime)) + \
         (np.divide(1, ((kiii-kii)*(kiiii-kiii))) * np.exp(-kiii*divtime)) - \
@@ -154,10 +114,6 @@ def Mo_solver(Sig_S, eq, divtime, min, max):
         (np.divide(1, ((kiii-kii)*(kiiii-kii))) * np.exp(-kiiii*divtime)) - \
         (np.divide(1, ((kiii-kii)*(kiiii-kiii))) * np.exp(-kiiii*divtime)) + \
         (np.divide(1, ((kiii-ki)*(kiiii-kiii))) * np.exp(-kiiii*divtime)))
-    if D < min:
-        D = min
-    if D > max:
-        D = max
 
     E = A_o + (np.divide((kiiii*kiii*kii*ki*A_o), (kii-ki)) * \
         (np.divide(np.exp(-ki*divtime), ((kiii-ki)*(kiiii-ki)*-ki)) - \
@@ -168,10 +124,6 @@ def Mo_solver(Sig_S, eq, divtime, min, max):
         np.divide(np.exp(-kiiii*divtime), ((kiii-kii)*(kiiii-kii)*-kiiii)) - \
         np.divide(np.exp(-kiiii*divtime), ((kiii-kii)*(kiiii-kiii)*-kiiii)) + \
         np.divide(np.exp(-kiiii*divtime), ((kiii-ki)*(kiiii-kiii)*-kiiii))))
-    if E < min:
-        E = min
-    if E > max:
-        E = max
 
     if eq == 1:
         return A
@@ -294,11 +246,11 @@ Sulfide_low = User_Sulfide / 1.1
 Sulfide_high = User_Sulfide * 1.1
 
 #creat artificial boundry for minimum concentration and maximum concentration
-A_min = User_Mo * 0.014
+A_min = User_Mo * 0.015
 A_max = User_Mo
-B_min = User_Mo * 0.02
+B_min = User_Mo * 0.05
 B_max = User_Mo
-C_min = User_Mo * 0.014
+C_min = User_Mo * 0.01
 C_max = User_Mo
 D_min = User_Mo * 0.02
 D_max = User_Mo
@@ -326,18 +278,6 @@ for indexer, (ki, kii, kiii, kiiii) in enumerate(zip(ki_randomized, kii_randomiz
         E_solutions[indexer, sec_indexer] = Mo_solver(Rand_Sulfide[indexer], 5, time_values[sec_indexer], E_min, E_max)
 
 
-#creat artificial boundry for minimum concentration and maximum concentration
-A_min = User_Mo * 0.014
-A_max = User_Mo
-B_min = User_Mo * 0.02
-B_max = User_Mo
-C_min = User_Mo * 0.014
-C_max = User_Mo
-D_min = 1e-7
-D_max = User_Mo
-E_min = 1e-7
-E_max = User_Mo
-
 ###############################################################################
 ###############################################################################
 ###############################################################################
@@ -345,7 +285,7 @@ E_max = User_Mo
 #repeat the loops to calculate sulide consumed, truncate data accordingly
 Species_cutoff = np.zeros((number_of_samples, len(time_values)))
 
-dominant_species = []
+dominant_species = np.zeros(shape=(5,1))
 
 #Check if the species is decreasing, don't double count moles of sulfide consumed
 for Sindexer, Svalue in enumerate(Rand_Sulfide):
@@ -362,8 +302,7 @@ for Sindexer, Svalue in enumerate(Rand_Sulfide):
     while i < B_idxmax and checker == True:
         DEL_sigS = Rand_Sulfide[Sindexer] - B_solutions[Sindexer][i] - C_solutions[Sindexer][i] - D_solutions[Sindexer][i] - E_solutions[Sindexer][i]
         if DEL_sigS <= 0:
-            dominant_species[1] = i
-            print(dominant_species[1])
+            dominant_species[0] +=  1
             #Species_cutoff[Sindexer, i] = 0
             checker = False
         i += 1
@@ -372,14 +311,14 @@ for Sindexer, Svalue in enumerate(Rand_Sulfide):
     while i < C_idxmax and checker == True:
         DEL_sigS = Rand_Sulfide[Sindexer] - B_solutions[Sindexer][i] - C_solutions[Sindexer][i] - D_solutions[Sindexer][i] - E_solutions[Sindexer][i]
         if DEL_sigS <= 0:
-            print('C_species', i, Sindexer)
+            dominant_species[1] += 1
             checker = False
         i+=1
     i = 0
     while i < D_idxmax and checker == True:
         DEL_sigS = Rand_Sulfide[Sindexer] - B_solutions[Sindexer][i] - C_solutions[Sindexer][i] - D_solutions[Sindexer][i] - E_solutions[Sindexer][i]
         if DEL_sigS <= 0:
-            print('D_species', i, Sindexer)
+            dominant_species[2] += 1
             checker = False
         i+=1
     i = 0
@@ -387,12 +326,14 @@ for Sindexer, Svalue in enumerate(Rand_Sulfide):
     while i < D_idxmax and checker == True:
         DEL_sigS = Rand_Sulfide[Sindexer] - B_solutions[Sindexer][i] - C_solutions[Sindexer][i] - D_solutions[Sindexer][i] - E_solutions[Sindexer][i]
         if DEL_sigS <= 0:
-            print('E_species', i, Sindexer)
+            dominant_species[3] += 1
             checker = False
         i += 1
 
     if checker == True:
-        print('all_species', Sindexer)
+        dominant_species[4] += 1
+
+print(dominant_species)
 
 ###############################################################################
 ###############################################################################
@@ -591,6 +532,13 @@ plt.close()
 ###############################################################################
 ###############################################################################
 
+
+plt.hist(dominant_species, bins=1)
+plt.savefig('image_hist.png', bbox_inches='tight', pad_inches=0.075, dpi=200, alpha=0.004)
+plt.show()
+plt.close()
+
+
 ###############################################################################
 ###############################################################################
 ###############################################################################
@@ -610,7 +558,7 @@ ax.legend([line1, line2, line3, line4, line5],
           fancybox=True, ncol=2, fontsize=12, framealpha=0.9)
 
 ax.set_xlabel(r'Time (s; $ \times 10^{5}$)', fontsize=12, color='k')
-ax.set_ylabel(r'[$^{98}$Mo ‰] (permille)', fontsize=12, color='k')
+ax.set_ylabel(r'[$^{98}$Mo] (permille)', fontsize=12, color='k')
 
 #define a horizontal line at 0 on y axis
 
