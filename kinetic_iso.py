@@ -25,8 +25,13 @@ import pylab
 ###############################################################################
 ###############################################################################
 
-
+#get the number of runs for the model
 number_of_samples = int(input('number of iterations?  '))
+
+#get input from user to sulfide values
+User_Mo = float(input('estimated total Mo conc.?  '))
+User_Sulfide = float(input('estimated sulfide value?  '))
+User_pH = int(input('estimated pH value?  '))
 
 
 ###############################################################################
@@ -42,26 +47,27 @@ number_of_samples = int(input('number of iterations?  '))
 #reaction of some thiomolybdate(VI) anions in aqueous solution. Inorg. Chim. Acta
 #and Harmer & Sykes (1980). Kinetics of the Interconversion of Sulfido- and
 #Oxomolybdate(VI) Species MoOxS4-x2- in Aqueous Solutions. Inorganic Chemistry
+
 '''
-ki_low = 9e-5 #k_{01}
-kii_low = 9e-6 #k_{12}
-kiii_low = 9e-6 #k_{23}
-kiiii_low = 2e-5 #K_{34}
+ki_low = 1e-4 #k_{01}
+kii_low = 9e-5 #k_{12}
+kiii_low = 1e-5 #k_{23}
+kiiii_low = 1e-6 #K_{34}
 
 ki_hi = 2e-4
-kii_hi = 2e-5
-kiii_hi = 2e-5
-kiiii_hi = 5e-5
+kii_hi = 2e-4
+kiii_hi = 3e-5
+kiiii_hi = 5e-6
 '''
 
 ki_low = 1e-4 #k_{01}
 kii_low = 4e-6 #k_{12}
-kiii_low = 5e-6 #k_{23} 9e-7
-kiiii_low = 3e-6 #K_{34} 8e-7 #K_{34}
+kiii_low = 3e-6 #k_{23} 9e-7
+kiiii_low = 2e-6 #K_{34} 8e-7 #K_{34}
 
-ki_hi = 2e-4
-kii_hi = 5e-6
-kiii_hi = 6e-6
+ki_hi = 3e-4
+kii_hi = 6e-6
+kiii_hi = 5e-6
 kiiii_hi = 4e-6
 
 ki_range = np.linspace(ki_low,ki_hi,10)
@@ -69,15 +75,27 @@ kii_range = np.linspace(kii_low,kii_hi,10)
 kiii_range = np.linspace(kiii_low,kiii_hi,10)
 kiiii_range = np.linspace(kiiii_low,kiiii_hi,10)
 
-#note: no kv for E needed
-#note: ki>kii>kiii>kiiii
-
-#Fractionation factor derived from expertimental data
+#Fractionation factor calculated from expertimental data
 del_A = 0.05
 del_B = 0.59
 del_C = -0.17
 del_D = -0.15
 del_E = -0.32
+
+'''
+#calculate the influence of pH on the reaction rates
+ki_range =  ki_range * 2
+kii_range = kii_range * 2
+kiii_range = 1000000000 * User_pH**-14.61
+kiiii_range = 4508 * User_pH**-9.93
+'''
+
+#calculate the influence of sulfide on rate reations (Clarke and Laurie, 1987)
+sulfide_Mo_ratio = User_Sulfide / User_Mo
+ki_range =  ki_range * (0.427**sulfide_Mo_ratio / ki_range)
+kii_range = ki_range * (0.2999**sulfide_Mo_ratio / ki_range)
+kiii_range = kiii_range * sulfide_Mo_ratio
+kiiii_range = kiiii_range * sulfide_Mo_ratio
 
 ###############################################################################
 ###############################################################################
@@ -90,22 +108,36 @@ time_values = np.linspace(0, 500000, 1000)[0:]
 ###############################################################################
 ###############################################################################
 
+#creat artificial boundry for minimum concentration and maximum concentration
+A_min = User_Mo * 0.02
+A_max = User_Mo
+B_min = User_Mo * 0.02
+B_max = User_Mo
+C_min = User_Mo * 0.04
+C_max = User_Mo
+D_min = User_Mo * 0.02
+D_max = User_Mo
+E_min = User_Mo * 0.02
+E_max = User_Mo
+
+###############################################################################
+###############################################################################
+###############################################################################
+
 #Create functions to be called to compute the different chemical parameters
 
 def Mo_solver(Sig_S, eq, divtime, min, max):
-    A = A_o * np.exp(-ki*divtime)+min
+    A = A_o * np.exp(-ki*divtime) + min
 
-    B = min + np.divide((ki*A_o),(kii-ki)) * (np.exp(-ki*divtime)-np.exp(-kii*divtime))
-    if B < (2*min):
-        B += min
+    B = np.divide((ki*A_o),(kii-ki)) * (np.exp(-ki*divtime)-np.exp(-kii*divtime))
 
-    C = min + (np.divide((kii*ki*A_o),(kii-ki)) * \
+    C = (np.divide((kii*ki*A_o),(kii-ki)) * \
         ((np.divide(1,(kiii-ki)) * np.exp(-ki*divtime)) - \
         (np.divide(1,(kiii-kii)) * (np.exp(-kii*divtime))) + \
         (np.divide(1 ,(kiii-kii)) * (np.exp(-kiii*divtime))) - \
         (np.divide(1 ,(kiii-ki)) * (np.exp(-kiii*divtime)))))
 
-    D = min + np.divide((kiii*kii*ki*A_o), (kii-ki))  * \
+    D = min + (np.divide((kiii*kii*ki*A_o), (kii-ki))  * \
         ((np.divide(1, ((kiii-ki)*(kiiii-ki))) * np.exp(-ki*divtime)) - \
         (np.divide(1, ((kiii-kii)*(kiiii-kii))) * np.exp(-kii*divtime)) + \
         (np.divide(1, ((kiii-kii)*(kiiii-kiii))) * np.exp(-kiii*divtime)) - \
@@ -113,9 +145,9 @@ def Mo_solver(Sig_S, eq, divtime, min, max):
         (np.divide(1, ((kiii-ki)*(kiiii-ki))) * np.exp(-kiiii*divtime)) + \
         (np.divide(1, ((kiii-kii)*(kiiii-kii))) * np.exp(-kiiii*divtime)) - \
         (np.divide(1, ((kiii-kii)*(kiiii-kiii))) * np.exp(-kiiii*divtime)) + \
-        (np.divide(1, ((kiii-ki)*(kiiii-kiii))) * np.exp(-kiiii*divtime)))
+        (np.divide(1, ((kiii-ki)*(kiiii-kiii))) * np.exp(-kiiii*divtime))))
 
-    E = A_o + (np.divide((kiiii*kiii*kii*ki*A_o), (kii-ki)) * \
+    E = min + A_o + (np.divide((kiiii*kiii*kii*ki*A_o), (kii-ki)) * \
         (np.divide(np.exp(-ki*divtime), ((kiii-ki)*(kiiii-ki)*-ki)) - \
         np.divide(np.exp(-kii*divtime), ((kiii-kii)*(kiiii-kii)*-kii)) + \
         np.divide(np.exp(-kiii*divtime), ((kiii-kii)*(kiiii-kiii)*-kiii)) - \
@@ -148,16 +180,19 @@ def Mo_iso_solver(species, divtime, mole_ratio):
         calc = (-3e-13 * divtime**2 + 1e-7 * divtime + 0.0419) / mole_ratio
         return calc
     if species == 'B':
-        calc = (-1e-6 * divtime + 0.9711) / mole_ratio
+        calc = (-4e-12 * divtime**2 + 1e-06 * divtime + 0.6516) / mole_ratio
+        #calc = (-1e-6 * divtime + 0.9711) / mole_ratio
         return calc
     if species == 'C':
-        calc = (3e-6 * divtime - 0.7303) / mole_ratio
+        #calc = (divtime**2 - 1E-05 * divtime + 0.01) / mole_ratio
+        calc = (-4e-12 * divtime**2 + 4e-06 * divtime - 0.7475) / mole_ratio
+        #calc = (3e-6 * divtime - 0.7303) / mole_ratio
         return calc
     if species == 'D':
         calc = (2e-12 * divtime**2 - 2e-6 * divtime - 0.042) / mole_ratio
         return calc
     if species == 'E':
-        calc = (-1e-6 * divtime - 0.0274) / mole_ratio
+        calc = (4e-13 * divtime**2 - 1e-06 * divtime - 0.0172) / mole_ratio
         return calc
     else:
         return
@@ -171,7 +206,6 @@ def Mo_mole_frac(input):
     Mo_calc = input/User_Mo
     return Mo_calc
 
-
 ###############################################################################
 ###############################################################################
 ###############################################################################
@@ -181,28 +215,9 @@ def Mo_mole_frac(input):
 #we are setting a seed for randomization for testing and ensuring we get same random results every time.
 #we are bootstrapping, allowing for values to get called more than once with numpy's random choice
 
-#get input from user to sulfide values
-User_Mo = float(input('estimated total Mo conc.?  '))
-User_Sulfide = float(input('estimated sulfide value?  '))
-User_pH = int(input('estimated pH value?  '))
-
 Ao_realvalues = []
 for z in time_values:
     Ao_realvalues.append(User_Mo)
-
-'''
-if User_pH < 7:
-    ki_range = ki_range * 2
-    kii_range = kii_range * 2
-    kiii_range = kiii_range * 2
-    kiiii_range = kiiii_range * 2
-
-if User_pH > 7:
-    ki_range = ki_range / 2
-    kii_range = kii_range / 2
-    kiii_range = kiii_range / 2
-    kiiii_range = kiiii_range / 2
-'''
 
 np.random.seed(0)
 rand_ki = np.array([np.random.choice(10) for i in range(number_of_samples)])
@@ -244,18 +259,6 @@ S_tot = 5e-5 * 10
 #add noise to the sulfide values
 Sulfide_low = User_Sulfide / 1.1
 Sulfide_high = User_Sulfide * 1.1
-
-#creat artificial boundry for minimum concentration and maximum concentration
-A_min = User_Mo * 0.015
-A_max = User_Mo
-B_min = User_Mo * 0.05
-B_max = User_Mo
-C_min = User_Mo * 0.01
-C_max = User_Mo
-D_min = User_Mo * 0.02
-D_max = User_Mo
-E_min = User_Mo * 0.013
-E_max = User_Mo
 
 #set the distribution of possible sulfide values
 Rand_Sulfide = np.array([np.random.uniform(Sulfide_low, Sulfide_high) for i in range(number_of_samples)])
@@ -469,7 +472,7 @@ plt.plot(time_hours[:50], -np.log(D_solutions[0][:50]), c='royalblue', zorder=2,
 #plt.plot(time_hours[50:], np.log(E_solutions[0][50:]), c='dodgerblue', zorder=1, alpha=1)
 
 plt.savefig('ln_C.png', bbox_inches='tight', pad_inches=0.075, dpi=200, alpha=0.004)
-plt.show()
+#plt.show()
 plt.close()
 
 
@@ -524,7 +527,7 @@ ax.set_yticklabels(['0','10','30','50','80','100'], fontsize=12)
 ax.grid(which='major', axis='both', linestyle='--', alpha=0.5)
 
 plt.savefig('image_ratio.png', bbox_inches='tight', pad_inches=0.075, dpi=200, alpha=0.004)
-plt.show()
+#plt.show()
 plt.close()
 
 
@@ -535,7 +538,7 @@ plt.close()
 
 plt.hist(dominant_species, bins=1)
 plt.savefig('image_hist.png', bbox_inches='tight', pad_inches=0.075, dpi=200, alpha=0.004)
-plt.show()
+#plt.show()
 plt.close()
 
 
