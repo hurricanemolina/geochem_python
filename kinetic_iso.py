@@ -10,6 +10,23 @@ and
 Dr. Maria J. Molina
 
 """
+###############################################################################
+###############################################################################
+###############################################################################
+
+#TODO list
+#add in scilearning paramater optimization for k values
+#test model with real data
+#visual output of most probable species as histogram
+# develop a better determination of stochastic processes for model
+#create interpolated data set from real data for machinelearning parameters
+#calcute polynomial equation of a line similar to data use poly to interpolate?
+#to test regression of real data versus calculated data, run a tight k value run
+#after take mean of each line, find data points with the clossest time to our measured time
+#plot these data points versus measured data, get r^2
+
+
+
 
 ###############################################################################
 ###############################################################################
@@ -19,6 +36,8 @@ import numpy as np
 import xarray as xr
 import matplotlib.pyplot as plt
 import pylab
+from sklearn.linear_model import LinearRegression
+from sklearn.metrics import mean_squared_error, r2_score
 
 
 ###############################################################################
@@ -29,8 +48,8 @@ import pylab
 number_of_samples = int(input('number of iterations?  '))
 
 #get input from user to sulfide values
-User_Mo = float(input('estimated total Mo conc.?  '))
-User_Sulfide = float(input('estimated sulfide value?  '))
+User_Mo = float(input('estimated total Mo conc. (M)?  '))
+User_Sulfide = float(input('estimated sulfide conc. (M)?  '))
 User_pH = int(input('estimated pH value?  '))
 
 
@@ -38,10 +57,52 @@ User_pH = int(input('estimated pH value?  '))
 ###############################################################################
 ###############################################################################
 
+#based on experiments conducted at STARLAB in 2017
+time_correlation = [0, 7200, 36000, 86400, 172800, 259200, 432000]
 
-#k value ranges
+#import your data set in netcdf format
+data = xr.open_dataset('file1_new.nc', decode_cf=True)
 
-#MARIA'S QUESTION: do we no longer need kiiii? noticed we don't have this variable in equations.
+#extract data variables and limit all the data to the first 7-time points.
+#time_values = data.time[:7].values
+
+Ao_emperical = []
+A_emperical = []
+B_emperical = []
+C_emperical = []
+D_emperical = []
+E_emperical = []
+
+for z in range(len(time_correlation)):
+    Ao_emperical.append(data.A_o[z].values)
+    A_emperical.append(data.A[z].values)
+    B_emperical.append(data.B[z].values)
+    C_emperical.append(data.C[z].values)
+    D_emperical.append(data.D[z].values)
+    E_emperical.append(data.E[z].values)
+
+data2 = xr.open_dataset('file2_new.nc', decode_cf=True)
+
+Ao_iso_emperical = []
+A_iso_emperical = []
+B_iso_emperical = []
+C_iso_emperical = []
+D_iso_emperical = []
+E_iso_emperical = []
+
+for z in range(len(time_correlation)):
+    Ao_iso_emperical.append(data2.A_o[z].values)
+    A_iso_emperical.append(data2.A[z].values)
+    B_iso_emperical.append(data2.B[z].values)
+    C_iso_emperical.append(data2.C[z].values)
+    D_iso_emperical.append(data2.D[z].values)
+    E_iso_emperical.append(data2.E[z].values)
+
+
+
+###############################################################################
+###############################################################################
+###############################################################################
 
 #k values are based on experiments in: Clarke et al (1987) Kinetics of the formation and hydrolysis
 #reaction of some thiomolybdate(VI) anions in aqueous solution. Inorg. Chim. Acta
@@ -70,6 +131,7 @@ kii_hi = 6e-6
 kiii_hi = 5e-6
 kiiii_hi = 4e-6
 
+
 ki_range = np.linspace(ki_low,ki_hi,10)
 kii_range = np.linspace(kii_low,kii_hi,10)
 kiii_range = np.linspace(kiii_low,kiii_hi,10)
@@ -92,10 +154,10 @@ kiiii_range = 4508 * User_pH**-9.93
 
 #calculate the influence of sulfide on rate reations (Clarke and Laurie, 1987)
 sulfide_Mo_ratio = User_Sulfide / User_Mo
-ki_range =  ki_range * (0.427**sulfide_Mo_ratio / ki_range)
-kii_range = ki_range * (0.2999**sulfide_Mo_ratio / ki_range)
-kiii_range = kiii_range * sulfide_Mo_ratio
-kiiii_range = kiiii_range * sulfide_Mo_ratio
+#ki_range =  ki_range * (0.427**sulfide_Mo_ratio / ki_range)
+#kii_range = ki_range * (0.2999**sulfide_Mo_ratio / ki_range)
+#kiii_range = kiii_range * sulfide_Mo_ratio
+#kiiii_range = kiiii_range * sulfide_Mo_ratio
 
 ###############################################################################
 ###############################################################################
@@ -109,16 +171,27 @@ time_values = np.linspace(0, 500000, 1000)[0:]
 ###############################################################################
 
 #creat artificial boundry for minimum concentration and maximum concentration
-A_min = User_Mo * 0.02
+A_min = User_Mo * 0.01
 A_max = User_Mo
-B_min = User_Mo * 0.02
+B_min = User_Mo * 0.01
 B_max = User_Mo
-C_min = User_Mo * 0.04
+C_min = User_Mo * 0.01
 C_max = User_Mo
-D_min = User_Mo * 0.02
+D_min = User_Mo * 0.01
 D_max = User_Mo
-E_min = User_Mo * 0.02
+E_min = User_Mo * 0.01
 E_max = User_Mo
+
+###############################################################################
+###############################################################################
+###############################################################################
+
+#simple function to find values for correlation fitness test
+
+def find_nearest(array, value):
+    array = np.asarray(array)
+    idx = (np.abs(array - value)).argmin()
+    return idx, array[idx]
 
 ###############################################################################
 ###############################################################################
@@ -129,9 +202,9 @@ E_max = User_Mo
 def Mo_solver(Sig_S, eq, divtime, min, max):
     A = A_o * np.exp(-ki*divtime) + min
 
-    B = np.divide((ki*A_o),(kii-ki)) * (np.exp(-ki*divtime)-np.exp(-kii*divtime))
+    B = np.divide((ki*A_o),(kii-ki)) * (np.exp(-ki*divtime)-np.exp(-kii*divtime)) + min
 
-    C = (np.divide((kii*ki*A_o),(kii-ki)) * \
+    C = min + (np.divide((kii*ki*A_o),(kii-ki)) * \
         ((np.divide(1,(kiii-ki)) * np.exp(-ki*divtime)) - \
         (np.divide(1,(kiii-kii)) * (np.exp(-kii*divtime))) + \
         (np.divide(1 ,(kiii-kii)) * (np.exp(-kiii*divtime))) - \
@@ -176,26 +249,77 @@ def Mo_solver(Sig_S, eq, divtime, min, max):
 #derived from emperical relationship to our data (Hlohowskyj et al., 2020)
 
 def Mo_iso_solver(species, divtime, mole_ratio):
+    A, B, C, D, E = [0,5], [0,5], [5,-5], [0,-5], [0,-5]
     if species == 'A':
-        calc = (-3e-13 * divtime**2 + 1e-7 * divtime + 0.0419) / mole_ratio
+        np.random.seed(0)
+        #A_range = np.linspace(A[0],A[1],10)
+        #A_iso_rand = np.array([np.random.choice(10) for i in range(number_of_samples)])
+        #A_iso_test = A_range[A_iso_rand]
+        calc = (0.444 * np.log(divtime) -2.5127)
+        #calc = (9e-14 * divtime**2 + 1e-7 * divtime - 0.76) / mole_ratio
         return calc
     if species == 'B':
-        calc = (-4e-12 * divtime**2 + 1e-06 * divtime + 0.6516) / mole_ratio
+        #calc = (-6e9 * mole_ratio**2 + 148945 * mole_ratio + 1.9459)
+        #calc = (-14.773 * mole_ratio**2 + 7.6379 * mole_ratio + 1.9459)
+        calc = (0.5868 * np.log(divtime) -4.3475)
         #calc = (-1e-6 * divtime + 0.9711) / mole_ratio
+        #calc = (-4e-12 * divtime**2 + 1e-6 * divtime + 0.6516) / mole_ratio
+        #calc = (8e-17 * divtime**3 -6e-11 * divtime**2 + 1e-5 * divtime + 0.4497) / mole_ratio
         return calc
     if species == 'C':
         #calc = (divtime**2 - 1E-05 * divtime + 0.01) / mole_ratio
-        calc = (-4e-12 * divtime**2 + 4e-06 * divtime - 0.7475) / mole_ratio
-        #calc = (3e-6 * divtime - 0.7303) / mole_ratio
+        calc = (-2e-12 * divtime**2 + 4e-06 * divtime - 0.0475) / mole_ratio
+        #calc = (3e-6 * divtime - 0.6933) / mole_ratio
+        #calc = 149527 * mole_ratio - 2.944
+        #calc = 0.8739 * np.log(divtime) - 10.657
         return calc
     if species == 'D':
         calc = (2e-12 * divtime**2 - 2e-6 * divtime - 0.042) / mole_ratio
+        #calc = (-1e-8 * divtime - 2.1766) / mole_ratio
+        #calc = 4e10 * mole_ratio**2 - 444940 * mole_ratio - 1.2036
         return calc
     if species == 'E':
         calc = (4e-13 * divtime**2 - 1e-06 * divtime - 0.0172) / mole_ratio
+        #calc = (-1e-7 * divtime - 0.0274) / mole_ratio
         return calc
     else:
         return
+
+from scipy import optimize
+
+def isotope_mix(x):
+    #section = 0
+    #divtime = 300
+    x_ratio = (A_solutions[section,divtime]/User_Mo, B_solutions[section,divtime]/User_Mo,
+                C_solutions[section,divtime]/User_Mo, D_solutions[section,divtime]/User_Mo,
+                E_solutions[section, divtime]/User_Mo)
+
+    print(x_ratio)
+
+    return ((x[0] * x_ratio[0]) + (x[1] * x_ratio[1]) +
+            (x[2] * x_ratio[1]) + (x[3] * x_ratio[3]) +
+            (x[4] * x_ratio[4]) - 0.17)
+
+x0= np.array([0]*5)
+x0_bound = (0,0.4)
+x1_bound = (0,0.5)
+x2_bound = (-0.4,0.5)
+x3_bound = (-0.5,0)
+x4_bound = (-0.4,0)
+
+iso_plot = []
+
+for i in range(0,5):
+    section = i
+    result = optimize.minimize(isotope_mix, x0=x0,method='L-BFGS-B',
+                           options={'maxiter':100})#, bounds=(x0_bound,x1_bound,x2_bound,x3_bound,x4_bound))
+
+    iso_plot.append(result.x)
+
+
+
+
+
 
 ###############################################################################
 ###############################################################################
@@ -214,6 +338,12 @@ def Mo_mole_frac(input):
 
 #we are setting a seed for randomization for testing and ensuring we get same random results every time.
 #we are bootstrapping, allowing for values to get called more than once with numpy's random choice
+
+#grab closest time value to emperical data collected in 2017
+time_array = []
+
+for i in range(len(time_correlation)):
+    time_array.append(find_nearest(time_values, time_correlation[i]))
 
 Ao_realvalues = []
 for z in time_values:
@@ -249,12 +379,6 @@ C_solutions = np.zeros((number_of_samples, len(time_values)))
 D_solutions = np.zeros((number_of_samples, len(time_values)))
 E_solutions = np.zeros((number_of_samples, len(time_values)))
 
-#define chemical constants
-R = 8.314
-T = 298
-DEL_G = -33
-DEL_sigS = 0
-S_tot = 5e-5 * 10
 
 #add noise to the sulfide values
 Sulfide_low = User_Sulfide / 1.1
@@ -264,10 +388,6 @@ Sulfide_high = User_Sulfide * 1.1
 Rand_Sulfide = np.array([np.random.uniform(Sulfide_low, Sulfide_high) for i in range(number_of_samples)])
 
 checker = True
-B_switch = 1
-C_switch = 1
-D_switch = 1
-E_switch = 1
 
 #Create loop to calculate each equation, using k values define above
 for indexer, (ki, kii, kiii, kiiii) in enumerate(zip(ki_randomized, kii_randomized, kiii_randomized, kiiii_randomized)):
@@ -279,7 +399,6 @@ for indexer, (ki, kii, kiii, kiiii) in enumerate(zip(ki_randomized, kii_randomiz
         C_solutions[indexer, sec_indexer] = Mo_solver(Rand_Sulfide[indexer], 3, time_values[sec_indexer], C_min, C_max)
         D_solutions[indexer, sec_indexer] = Mo_solver(Rand_Sulfide[indexer], 4, time_values[sec_indexer], D_min, D_max)
         E_solutions[indexer, sec_indexer] = Mo_solver(Rand_Sulfide[indexer], 5, time_values[sec_indexer], E_min, E_max)
-
 
 ###############################################################################
 ###############################################################################
@@ -393,14 +512,120 @@ for indexer, ki in enumerate(ki_randomized):
 ###############################################################################
 ###############################################################################
 
+#verification of concentrations
+A_model_corr = []
+B_model_corr = []
+C_model_corr = []
+D_model_corr = []
+E_model_corr = []
 
-#verification later...
-'''
-A_realvalues = data.A[:7].values
-B_realvalues = data.B[:7].values
-C_realvalues = data.C[:7].values
-D_realvalues = data.D[:7].values
-'''
+A_solutions_mean = A_solutions.mean(axis=0)
+B_solutions_mean = B_solutions.mean(axis=0)
+C_solutions_mean = C_solutions.mean(axis=0)
+D_solutions_mean = D_solutions.mean(axis=0)
+E_solutions_mean = E_solutions.mean(axis=0)
+
+#create specific lists for testing correlation for each species
+for i, q in time_array:
+    A_model_corr.append(A_solutions_mean[i])
+    B_model_corr.append(B_solutions_mean[i])
+    C_model_corr.append(C_solutions_mean[i])
+    D_model_corr.append(D_solutions_mean[i])
+    E_model_corr.append(E_solutions_mean[i])
+
+A_prime = np.array(A_model_corr)
+A_prime = A_prime.reshape(-1,1)
+B_prime = np.array(B_model_corr)
+B_prime = B_prime.reshape(-1,1)
+C_prime = np.array(C_model_corr)
+C_prime = C_prime.reshape(-1,1)
+D_prime = np.array(D_model_corr)
+D_prime = D_prime.reshape(-1,1)
+E_prime = np.array(E_model_corr)
+E_prime = E_prime.reshape(-1,1)
+
+plt.ylim(0)
+plt.xlim(0)
+plt.scatter(A_model_corr[:], A_emperical[:], c='grey', marker='o')
+plt.scatter(B_model_corr[:], B_emperical[:], c='goldenrod', marker='o')
+plt.scatter(C_model_corr[:], C_emperical[:], c='chocolate', marker='o')
+plt.scatter(D_model_corr[:], D_emperical[:], c='royalblue', marker='o')
+plt.scatter(E_model_corr[:], E_emperical[:], c='dodgerblue', marker='o')
+plt.savefig('correlation.png', bbox_inches='tight', pad_inches=0.075, dpi=200)
+#plt.show()
+plt.close()
+
+A_regression  = LinearRegression().fit(A_prime, A_emperical)
+print('A model verus real conc. r^2', A_regression.score(A_prime, A_emperical))
+B_regression  = LinearRegression().fit(B_prime, B_emperical)
+print('B model verus real conc. r^2', B_regression.score(B_prime, B_emperical))
+C_regression  = LinearRegression().fit(C_prime, C_emperical)
+print('C model verus real conc. r^2', C_regression.score(C_prime, C_emperical))
+D_regression  = LinearRegression().fit(D_prime, D_emperical)
+print('D model verus real conc. r^2', D_regression.score(D_prime, D_emperical))
+E_regression  = LinearRegression().fit(E_prime, E_emperical)
+print('E model verus real conc. r^2', E_regression.score(E_prime, E_emperical))
+
+
+
+###############################################################################
+###############################################################################
+###############################################################################
+
+#verification of isotopic ratios
+A_model_corr = []
+B_model_corr = []
+C_model_corr = []
+D_model_corr = []
+E_model_corr = []
+
+A_iso_solutions_mean = A_isotope_ratio.mean(axis=0)
+B_iso_solutions_mean = B_isotope_ratio.mean(axis=0)
+C_iso_solutions_mean = C_isotope_ratio.mean(axis=0)
+D_iso_solutions_mean = D_isotope_ratio.mean(axis=0)
+E_iso_solutions_mean = E_isotope_ratio.mean(axis=0)
+
+#create specific lists for testing correlation for each species
+for i, q in time_array:
+    A_model_corr.append(A_iso_solutions_mean[i])
+    B_model_corr.append(B_iso_solutions_mean[i])
+    C_model_corr.append(C_iso_solutions_mean[i])
+    D_model_corr.append(D_iso_solutions_mean[i])
+    E_model_corr.append(E_iso_solutions_mean[i])
+
+A_prime = np.array(A_model_corr)
+A_prime = A_prime.reshape(-1,1)
+B_prime = np.array(B_model_corr)
+B_prime = B_prime.reshape(-1,1)
+C_prime = np.array(C_model_corr)
+C_prime = C_prime.reshape(-1,1)
+D_prime = np.array(D_model_corr)
+D_prime = D_prime.reshape(-1,1)
+E_prime = np.array(E_model_corr)
+E_prime = E_prime.reshape(-1,1)
+
+plt.scatter(A_model_corr[:], A_iso_emperical[:], c='grey', marker='o')
+plt.scatter(B_model_corr[1:], B_iso_emperical[1:], c='goldenrod', marker='o')
+plt.scatter(C_model_corr[:], C_iso_emperical[:], c='chocolate', marker='o')
+plt.scatter(D_model_corr[:], D_iso_emperical[:], c='royalblue', marker='o')
+plt.scatter(E_model_corr[:], E_iso_emperical[:], c='dodgerblue', marker='o')
+plt.savefig('correlation_iso.png', bbox_inches='tight', pad_inches=0.075, dpi=200)
+plt.ylim(0)
+plt.xlim(0, np.max(A_model_corr))
+#plt.show()
+plt.close()
+
+print('\n')
+A_regression  = LinearRegression().fit(A_prime[1:], A_iso_emperical[1:])
+print('A model verus real isotopes. r^2', A_regression.score(A_prime[1:], A_iso_emperical[1:]))
+B_regression  = LinearRegression().fit(B_prime[1:], B_iso_emperical[1:])
+print('B model verus real isotopes r^2', B_regression.score(B_prime[1:], B_iso_emperical[1:]))
+C_regression  = LinearRegression().fit(C_prime[1:], C_iso_emperical[1:])
+print('C model verus real isotopes. r^2', C_regression.score(C_prime[1:], C_iso_emperical[1:]))
+D_regression  = LinearRegression().fit(D_prime[1:], D_iso_emperical[1:])
+print('D model verus real isotopes r^2', D_regression.score(D_prime[1:], D_iso_emperical[1:]))
+E_regression  = LinearRegression().fit(E_prime[1:], E_iso_emperical[1:])
+print('E model verus real isotopes. r^2', E_regression.score(E_prime[1:], E_iso_emperical[1:]))
 
 ###############################################################################
 ###############################################################################
@@ -460,21 +685,60 @@ ax.set_yticklabels(['0','1','2','3','4','5'], fontsize=12)
 
 ax.grid(which='major', axis='both', linestyle='--', alpha=0.5)
 plt.savefig('image_iso.png', bbox_inches='tight', pad_inches=0.075, dpi=200, alpha=0.004)
-plt.show()
-plt.close()
-
-time_hours = time_values
-#save your image
-#plt.plot(time_values, A_solutions[0], c='grey', zorder=5, alpha=0.3)
-plt.plot(time_hours[:50], -np.log(B_solutions[0][:50]), c='goldenrod', zorder=4, alpha=1)
-#plt.plot(time_hours[:50], np.log(C_solutions[0][:50]), c='chocolate', zorder=3, alpha=1)
-plt.plot(time_hours[:50], -np.log(D_solutions[0][:50]), c='royalblue', zorder=2, alpha=1)
-#plt.plot(time_hours[50:], np.log(E_solutions[0][50:]), c='dodgerblue', zorder=1, alpha=1)
-
-plt.savefig('ln_C.png', bbox_inches='tight', pad_inches=0.075, dpi=200, alpha=0.004)
 #plt.show()
 plt.close()
 
+time_hours = time_values / 3600
+
+
+test1 = time_hours[50:].reshape(-1,1)
+test2 = np.log10(B_solutions_mean[50:])
+B_log_regression  = LinearRegression().fit(test1, test2)
+
+plt.plot(time_hours[50:], np.log10(B_solutions_mean[50:]), c='goldenrod', zorder=1, alpha=1, marker='o')
+plt.plot(test1, B_log_regression.predict(test1), c='black', zorder=2, alpha=1)
+plt.xlim(0)
+plt.savefig('ln_C_B.png', bbox_inches='tight', pad_inches=0.075, dpi=200, alpha=0.004)
+plt.xlabel('Time (hours)')
+plt.ylabel('ln([$MoO_3S$])')
+#plt.show()
+plt.close()
+
+test1 = time_hours[600:].reshape(-1,1)
+test2 = np.log10(C_solutions_mean[600:])
+C_log_regression  = LinearRegression().fit(test1, test2)
+
+plt.plot(time_hours[600:], np.log10(C_solutions_mean[600:]), c='chocolate', zorder=1, alpha=1, marker='o')
+plt.plot(test1, C_log_regression.predict(test1), c='black', zorder=2, alpha=1)
+plt.savefig('ln_C_C.png', bbox_inches='tight', pad_inches=0.075, dpi=200, alpha=0.004)
+plt.xlabel('Time (hours)')
+plt.ylabel('ln([$MoO_2S_2$])')
+#plt.show()
+plt.close()
+
+test1 = time_hours[200:].reshape(-1,1)
+test2 = np.log10(A_o - D_solutions_mean[200:])
+D_log_regression  = LinearRegression().fit(test1, test2)
+
+plt.plot(time_hours[200:], np.log10(A_o - D_solutions_mean[200:]), c='royalblue', zorder=1, alpha=1, marker='o')
+plt.plot(test1, D_log_regression.predict(test1), c='black', zorder=2, alpha=1)
+plt.savefig('ln_C_D.png', bbox_inches='tight', pad_inches=0.075, dpi=200, alpha=0.004)
+plt.xlabel('Time (hours)')
+plt.ylabel('ln($\Sigma[Mo] - [$MoOS_3$])')
+#plt.show()
+plt.close()
+
+test1 = time_hours[200:].reshape(-1,1)
+test2 = np.log10(A_o - E_solutions_mean[200:])
+E_log_regression  = LinearRegression().fit(test1, test2)
+
+plt.plot(time_hours[200:], np.log10(A_o - E_solutions_mean[200:]), c='dodgerblue', zorder=1, alpha=1, marker='o')
+plt.plot(test1, E_log_regression.predict(test1), c='black', zorder=2, alpha=1)
+plt.savefig('ln_C_E.png', bbox_inches='tight', pad_inches=0.075, dpi=200, alpha=0.004)
+plt.xlabel('Time (hours)')
+plt.ylabel('ln([$\Sigma[Mo] - [$MoS_4$])')
+#plt.show()
+plt.close()
 
 ###############################################################################
 ###############################################################################
