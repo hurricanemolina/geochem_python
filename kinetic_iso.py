@@ -15,18 +15,9 @@ Dr. Maria J. Molina
 ###############################################################################
 
 #TODO list
-#add in scilearning paramater optimization for k values
-#test model with real data
 #visual output of most probable species as histogram
-# develop a better determination of stochastic processes for model
+# evelop a better determination of stochastic processes for model
 #create interpolated data set from real data for machinelearning parameters
-#calcute polynomial equation of a line similar to data use poly to interpolate?
-#to test regression of real data versus calculated data, run a tight k value run
-#after take mean of each line, find data points with the clossest time to our measured time
-#plot these data points versus measured data, get r^2
-
-
-
 
 ###############################################################################
 ###############################################################################
@@ -255,23 +246,24 @@ def Mo_iso_solver(species, divtime, mole_ratio):
         #A_range = np.linspace(A[0],A[1],10)
         #A_iso_rand = np.array([np.random.choice(10) for i in range(number_of_samples)])
         #A_iso_test = A_range[A_iso_rand]
-        calc = (0.444 * np.log(divtime) -2.5127)
-        #calc = (9e-14 * divtime**2 + 1e-7 * divtime - 0.76) / mole_ratio
+        #calc = (0.444 * np.log(divtime) -2.5127)
+        #calc = (177827 * mole_ratio**3 - 17396 * mole_ratio**2 + 481.05 * mole_ratio - 1.0172)
+        calc = -1.255 * np.log(mole_ratio) - 2.1249
         return calc
     if species == 'B':
         #calc = (-6e9 * mole_ratio**2 + 148945 * mole_ratio + 1.9459)
         #calc = (-14.773 * mole_ratio**2 + 7.6379 * mole_ratio + 1.9459)
-        calc = (0.5868 * np.log(divtime) -4.3475)
+        calc = (-1.603 * np.log(mole_ratio) + 0.4349)
         #calc = (-1e-6 * divtime + 0.9711) / mole_ratio
         #calc = (-4e-12 * divtime**2 + 1e-6 * divtime + 0.6516) / mole_ratio
         #calc = (8e-17 * divtime**3 -6e-11 * divtime**2 + 1e-5 * divtime + 0.4497) / mole_ratio
         return calc
     if species == 'C':
         #calc = (divtime**2 - 1E-05 * divtime + 0.01) / mole_ratio
-        calc = (-2e-12 * divtime**2 + 4e-06 * divtime - 0.0475) / mole_ratio
-        #calc = (3e-6 * divtime - 0.6933) / mole_ratio
+        #calc = (-2e-12 * divtime**2 + 4e-06 * divtime - 0.0475) / mole_ratio
+        calc = (3e-6 * divtime - 0.6933) / mole_ratio
         #calc = 149527 * mole_ratio - 2.944
-        #calc = 0.8739 * np.log(divtime) - 10.657
+        #calc = 2.9908 * np.log(mole_ratio) + 3.5551
         return calc
     if species == 'D':
         calc = (2e-12 * divtime**2 - 2e-6 * divtime - 0.042) / mole_ratio
@@ -287,40 +279,40 @@ def Mo_iso_solver(species, divtime, mole_ratio):
 
 from scipy import optimize
 
-def isotope_mix(x):
-    #section = 0
-    #divtime = 300
-    x_ratio = (A_solutions[section,divtime]/User_Mo, B_solutions[section,divtime]/User_Mo,
-                C_solutions[section,divtime]/User_Mo, D_solutions[section,divtime]/User_Mo,
-                E_solutions[section, divtime]/User_Mo)
-
+###############################################################################
+###############################################################################
+###############################################################################
+'''
+def isotope_mix(c):
+    section = 0
+    divtime = 300
+    x_ratio = (A_solutions[section, divtime] / User_Mo, B_solutions[section, divtime] / User_Mo,
+                C_solutions[section, divtime] / User_Mo, D_solutions[section, divtime] / User_Mo,
+                E_solutions[section, divtime] / User_Mo)
     print(x_ratio)
+    return ((c[0] * x_ratio[0]) + (c[1] * x_ratio[1]) +
+            (c[2] * x_ratio[1]) + (c[3] * x_ratio[3]) +
+            (c[4] * x_ratio[4]) - 0.17)
 
-    return ((x[0] * x_ratio[0]) + (x[1] * x_ratio[1]) +
-            (x[2] * x_ratio[1]) + (x[3] * x_ratio[3]) +
-            (x[4] * x_ratio[4]) - 0.17)
+def iso_optimize_test():
+    x0 = np.array([0]*5)
+    x0_bound = (0,4)
+    x1_bound = (0,5)
+    x2_bound = (-4,5)
+    x3_bound = (-5,0)
+    x4_bound = (-4,0)
 
-x0= np.array([0]*5)
-x0_bound = (0,0.4)
-x1_bound = (0,0.5)
-x2_bound = (-0.4,0.5)
-x3_bound = (-0.5,0)
-x4_bound = (-0.4,0)
+    iso_plot = []
 
-iso_plot = []
-
-for i in range(0,5):
-    section = i
-    result = optimize.minimize(isotope_mix, x0=x0,method='L-BFGS-B',
+    for i in range(0,5):
+        section = i
+        divtime = np.random.randint(0,500)
+        result = optimize.minimize(isotope_mix, x0=x0,method='L-BFGS-B',
                            options={'maxiter':100})#, bounds=(x0_bound,x1_bound,x2_bound,x3_bound,x4_bound))
 
-    iso_plot.append(result.x)
-
-
-
-
-
-
+        iso_plot.append(result.x)
+    return result, iso_plot
+'''
 ###############################################################################
 ###############################################################################
 ###############################################################################
@@ -810,6 +802,44 @@ plt.close()
 ###############################################################################
 ###############################################################################
 
+'''
+outfile = open('test.csv', 'w')
+out = csv.writer(outfile, delimiter=',')
+a = [14, 72, 173, 345, 518, 863]
+#new = []
+outfile.write('time, MoO4%, MoO3S%, MoO2S2%, MoOS3%, MoS4% \n')
+for i in a:
+    #new = [time_values[i], A_mole_ratio[0][i], B_mole_ratio[0][i], C_mole_ratio[0][i], D_mole_ratio[0][i], E_mole_ratio[0][i]]
+    #out.writerows(zip(time_values[i], A_mole_ratio[0][i], B_mole_ratio[0][i], C_mole_ratio[0][i], D_mole_ratio[0][i], E_mole_ratio[0][i]))
+    #new.append(zip(time_values[i], A_mole_ratio[0][i], B_mole_ratio[0][i], C_mole_ratio[0][i], D_mole_ratio[0][i], E_mole_ratio[0][i]))
+    #new  = zip(time_values[i], A_mole_ratio[0][i], B_mole_ratio[0][i], C_mole_ratio[0][i], D_mole_ratio[0][i], E_mole_ratio[0][i])
+    #for z in range(len(new)):
+    #    outfile.write(f'{new[z]}\n')
+    outfile.write(f'{time_values[i], A_mole_ratio[0][i], B_mole_ratio[0][i], C_mole_ratio[0][i], D_mole_ratio[0][i], E_mole_ratio[0][i]}\n')
+outfile.close()
+
+def find_nearest(array, value):
+    array = np.asarray(array)
+    idx = (np.abs(array - value)).argmin()
+    return array[idx], idx
+
+def line_mean(array):
+    #array = np.asarray(array)
+    transp = array.T
+    calc = []
+    for i in range(len(transp)):
+        calc.append(np.mean(transp[i]))
+    return calc
+
+plt.plot(time_values, A_solutions[0], marker='', color='grey', fillstyle='full', markeredgecolor='black',markeredgewidth=0.5)
+plt.plot(time_values, test, marker='', color='red', fillstyle='full', markeredgecolor='blue',markeredgewidth=0.5)
+
+'''
+
+###############################################################################
+###############################################################################
+###############################################################################
+
 #make figure layout
 fig = plt.figure(figsize=(8.,4.))
 
@@ -851,41 +881,3 @@ plt.ylim(-5,5)
 plt.savefig('image_delta.png', bbox_inches='tight', pad_inches=0.075, dpi=200, alpha=0.004)
 plt.show()
 plt.close()
-
-
-###############################################################################
-###############################################################################
-###############################################################################
-'''
-outfile = open('test.csv', 'w')
-out = csv.writer(outfile, delimiter=',')
-a = [14, 72, 173, 345, 518, 863]
-#new = []
-outfile.write('time, MoO4%, MoO3S%, MoO2S2%, MoOS3%, MoS4% \n')
-for i in a:
-    #new = [time_values[i], A_mole_ratio[0][i], B_mole_ratio[0][i], C_mole_ratio[0][i], D_mole_ratio[0][i], E_mole_ratio[0][i]]
-    #out.writerows(zip(time_values[i], A_mole_ratio[0][i], B_mole_ratio[0][i], C_mole_ratio[0][i], D_mole_ratio[0][i], E_mole_ratio[0][i]))
-    #new.append(zip(time_values[i], A_mole_ratio[0][i], B_mole_ratio[0][i], C_mole_ratio[0][i], D_mole_ratio[0][i], E_mole_ratio[0][i]))
-    #new  = zip(time_values[i], A_mole_ratio[0][i], B_mole_ratio[0][i], C_mole_ratio[0][i], D_mole_ratio[0][i], E_mole_ratio[0][i])
-    #for z in range(len(new)):
-    #    outfile.write(f'{new[z]}\n')
-    outfile.write(f'{time_values[i], A_mole_ratio[0][i], B_mole_ratio[0][i], C_mole_ratio[0][i], D_mole_ratio[0][i], E_mole_ratio[0][i]}\n')
-outfile.close()
-
-def find_nearest(array, value):
-    array = np.asarray(array)
-    idx = (np.abs(array - value)).argmin()
-    return array[idx], idx
-
-def line_mean(array):
-    #array = np.asarray(array)
-    transp = array.T
-    calc = []
-    for i in range(len(transp)):
-        calc.append(np.mean(transp[i]))
-    return calc
-
-plt.plot(time_values, A_solutions[0], marker='', color='grey', fillstyle='full', markeredgecolor='black',markeredgewidth=0.5)
-plt.plot(time_values, test, marker='', color='red', fillstyle='full', markeredgecolor='blue',markeredgewidth=0.5)
-
-'''
