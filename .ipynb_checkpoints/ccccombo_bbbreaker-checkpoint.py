@@ -3,14 +3,15 @@ import numpy as np
 #set the boundry conditions of the equations & define some global constants
 Bounds = np.array([[0,5], [0,5], [-5,5], [-5,0], [-5,0]])
 
-real_value = 0.1
+real_value = 0.17
 choices = 10
+number_of_samples = 10
 
 ###############################################################################
 ###############################################################################
 ###############################################################################
 
-#define a function to calculate and test inputs
+#define a few functions to calculate and test inputs
 def combo_finder(frac, iso):
     calc = np.zeros((5, choices))
     for z, i in enumerate(frac):
@@ -50,8 +51,8 @@ def solution_improvement():
 ###############################################################################
 ###############################################################################
 
-def choose_answers(boundry_array, iterate, offset):
-    np.set_printoptions(formatter={'float': lambda x: "{0:0.1f}".format(x)})
+def choose_answers(boundry_array, iterate):
+
     #choose a set of values from the boundries to be tested
     if iterate == False:
         A_test = np.linspace(boundry_array[0,0], boundry_array[0,1], choices)
@@ -60,18 +61,8 @@ def choose_answers(boundry_array, iterate, offset):
         D_test = np.linspace(boundry_array[3,0], boundry_array[3,1], choices)
         E_test = np.linspace(boundry_array[4,0], boundry_array[4,1], choices)
     if iterate == True:
-        boundry_low = boundry_array * (1 - offset)
-        boundry_high = boundry_array * (1 + offset)
-
-        #make sure that new boundries do not violate original bounds
-        for sec in range(2):
-            for idx, i in enumerate(Bounds.T[sec]):
-                if sec == 0 and i > boundry_low[idx]:
-                    print('low  warning pass', idx, i, boundry_low[idx])
-                    boundry_low[idx] = Bounds.T[sec, idx]
-                if sec == 1 and i < boundry_high[idx]:
-                    print('high warning pass', idx, i, boundry_high[idx])
-                    boundry_high[idx] = Bounds.T[sec, idx]
+        boundry_low = boundry_array * 0.8
+        boundry_high = boundry_array * 1.2
         A_test = np.linspace(boundry_low[0], boundry_high[0], choices)
         B_test = np.linspace(boundry_low[1], boundry_high[1], choices)
         C_test = np.linspace(boundry_low[2], boundry_high[2], choices)
@@ -80,11 +71,11 @@ def choose_answers(boundry_array, iterate, offset):
 
     #randomly (if you want) choose some values from this setup
     #pick some random numbers from linspace and assign them to an array
-    rand_A = np.array([np.random.choice(choices) for i in range(10)])
-    rand_B = np.array([np.random.choice(choices) for i in range(10)])
-    rand_C = np.array([np.random.choice(choices) for i in range(10)])
-    rand_D = np.array([np.random.choice(choices) for i in range(10)])
-    rand_E = np.array([np.random.choice(choices) for i in range(10)])
+    rand_A = np.array([np.random.choice(choices) for i in range(number_of_samples)])
+    rand_B = np.array([np.random.choice(choices) for i in range(number_of_samples)])
+    rand_C = np.array([np.random.choice(choices) for i in range(number_of_samples)])
+    rand_D = np.array([np.random.choice(choices) for i in range(number_of_samples)])
+    rand_E = np.array([np.random.choice(choices) for i in range(number_of_samples)])
 
     #assign randomized values to arrays
     A_randomized = A_test[rand_A]
@@ -128,7 +119,7 @@ np.random.shuffle(frac_list)
 
 np.set_printoptions(formatter={'float': lambda x: "{0:0.1f}".format(x)})
 
-tester_array = choose_answers(Bounds, False, 0.4)
+tester_array = choose_answers(Bounds, False)
 
 final_values = combo_finder(frac_list, tester_array)
 final_values = final_values.T
@@ -145,9 +136,9 @@ for idx, i in enumerate(results):
     else:
         print(idx, 'not within + or - 50%')
 
-print('\n 2nd trial \n')
+print('\n nth trial \n')
 
-tester_array = choose_answers(new_boundry, True, 0.2)
+tester_array = choose_answers(new_boundry, True)
 
 final_values = combo_finder(frac_list, tester_array)
 final_values = final_values.T
@@ -160,19 +151,3 @@ for idx, i in enumerate(results):
         new_boundry = tester_array.T[idx]
     else:
         print(idx, 'not within + or - 20%')
-
-print('\n nth trial \n')
-
-tester_array = choose_answers(new_boundry, True, 0.1)
-
-final_values = combo_finder(frac_list, tester_array)
-final_values = final_values.T
-
-results = solution_tester(final_values, real_value)
-
-for idx, i in enumerate(results):
-    if (real_value * 1.1) > results[idx] and (real_value * 0.9) < results[idx]:
-        print(idx, "{:.3f}".format(results[idx]), 'values:', tester_array.T[idx])
-        new_boundry = tester_array.T[idx]
-    else:
-        print(idx, 'not within + or - 10%')
