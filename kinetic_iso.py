@@ -99,7 +99,7 @@ for z in range(len(time_correlation)):
 Bounds = np.array([[0,5], [0,5], [-5,5], [-5,0], [-5,0]])
 
 real_value = 0.1
-choices = 10
+
 
 ###############################################################################
 ###############################################################################
@@ -107,11 +107,11 @@ choices = 10
 
 #define a function to calculate and test inputs
 
-def combo_finder(frac, iso):
-    calc = np.zeros((5, choices))
+def combo_finder(frac, iso, choices):
+    iso_calc = np.zeros((5, choices))
     for z, i in enumerate(frac):
-        calc[z] = frac[z] * iso[z]
-    return calc
+        iso_calc[z] = frac[z] * iso[z]
+    return iso_calc
 
 ###############################################################################
 ###############################################################################
@@ -122,15 +122,7 @@ def solution_tester(input, solution):
     tst_output = np.zeros((len(input)))
     for idx, i in enumerate(input):
         test = sum(input[idx])
-        if test == solution:
-            print(idx, 'solution == input value')
-            tst_output[idx] = test
-        if test < solution:
-            print(idx, 'too low')
-            tst_output[idx] = test
-        if test > solution:
-            print(idx, 'too high')
-            tst_output[idx] = test
+        tst_output[idx] = test
     return  tst_output
 
 ###############################################################################
@@ -146,8 +138,10 @@ def solution_improvement():
 ###############################################################################
 ###############################################################################
 
-def choose_answers(boundry_array, iterate, offset):
+def choose_answers(boundry_array, iterate, offset, choices):
+
     np.set_printoptions(formatter={'float': lambda x: "{0:0.1f}".format(x)})
+
     #choose a set of values from the boundries to be tested
     if iterate == False:
         A_test = np.linspace(boundry_array[0,0], boundry_array[0,1], choices)
@@ -155,6 +149,7 @@ def choose_answers(boundry_array, iterate, offset):
         C_test = np.linspace(boundry_array[2,0], boundry_array[2,1], choices)
         D_test = np.linspace(boundry_array[3,0], boundry_array[3,1], choices)
         E_test = np.linspace(boundry_array[4,0], boundry_array[4,1], choices)
+
     if iterate == True:
         boundry_low = boundry_array * (1 - offset)
         boundry_high = boundry_array * (1 + offset)
@@ -176,11 +171,11 @@ def choose_answers(boundry_array, iterate, offset):
 
     #randomly (if you want) choose some values from this setup
     #pick some random numbers from linspace and assign them to an array
-    rand_A = np.array([np.random.choice(choices) for i in range(10)])
-    rand_B = np.array([np.random.choice(choices) for i in range(10)])
-    rand_C = np.array([np.random.choice(choices) for i in range(10)])
-    rand_D = np.array([np.random.choice(choices) for i in range(10)])
-    rand_E = np.array([np.random.choice(choices) for i in range(10)])
+    rand_A = np.array([np.random.choice(choices) for i in range(choices)])
+    rand_B = np.array([np.random.choice(choices) for i in range(choices)])
+    rand_C = np.array([np.random.choice(choices) for i in range(choices)])
+    rand_D = np.array([np.random.choice(choices) for i in range(choices)])
+    rand_E = np.array([np.random.choice(choices) for i in range(choices)])
 
     #assign randomized values to arrays
     A_randomized = A_test[rand_A]
@@ -377,7 +372,7 @@ def Mo_iso_solver(species, divtime, mole_ratio):
         #A_iso_test = A_range[A_iso_rand]
         #calc = (0.444 * np.log(divtime) -2.5127)
         #calc = (177827 * mole_ratio**3 - 17396 * mole_ratio**2 + 481.05 * mole_ratio - 1.0172)
-        #calc = -1.255 * np.log(mole_ratio) - 2.1249
+        calc = -1.255 * np.log(mole_ratio) - 2.1249
         #calc = some variable with solution
         return calc
     if species == 'B':
@@ -616,53 +611,47 @@ E_isotope_ratio = np.zeros((number_of_samples, len(time_values)))
 ###############################################################################
 ###############################################################################
 
+np.set_printoptions(formatter={'float': lambda x: "{0:0.1f}".format(x)})
 tester_array = np.zeros((number_of_samples, len(time_values)))
+data_holder = np.zeros((len(time_values), 300))
+data_holder2 = np.zeros((number_of_samples, len(time_values)))
+a_temp = []
+b_temp = []
+c_temp = []
+d_temp = []
+e_temp = []
 
-def choose_species(species_type):
-    if species_type == 0
-        return A_mole_ratio
-    if species_type == 1
-        return
-    if species_type == 2
-        return
-    if species_type == 3
-        return
-    if species_type == 4
-        return
+from time import sleep
+from progress.bar import Bar
 
-    tester_array = choose_answers(Bounds, False, 0.4)
-    final_values = combo_finder(mole_ratio, tester_array)
+bar = Bar('Processing', max=1000)
+
+for idx in range(1000):
+    sleep(0.1)
+    bar.next()
+    #print(idx/1000 * 100, '%')
+    mole_ratio = [A_mole_ratio[0,idx], B_mole_ratio[0,idx], C_mole_ratio[0,idx], D_mole_ratio[0,idx], E_mole_ratio[0,idx]]
+    tester_array = choose_answers(Bounds, False, 0.4, 300)
+    final_values = combo_finder(mole_ratio, tester_array, 300)
     final_values = final_values.T
     results = solution_tester(final_values, real_value)
-    new_boundry = np.zeros((5))
+    data_holder[idx] = results
+    new_boundry = np.zeros((100))
 
-    for idx, i in enumerate(results):
-        if (real_value * 1.5) > results[idx] and (real_value * 0.5) < results[idx]:
-            new_boundry = tester_array.T[idx]
+    #store the index for each result that is close to real value, to later use a solution
+    for z, i in enumerate(results):
+        if i < (real_value * 1.1) and i > (real_value * -1.1):
+            a_temp.append(tester_array.T[z, 0])
+            b_temp.append(tester_array.T[z, 1])
+            c_temp.append(tester_array.T[z, 2])
+            d_temp.append(tester_array.T[z, 3])
+            e_temp.append(tester_array.T[z, 4])
 
-    tester_array = choose_answers(new_boundry, True, 0.2)
-    final_values = combo_finder(frac_list, tester_array)
-    final_values = final_values.T
-    results = solution_tester(final_values, real_value)
-
-    for idx, i in enumerate(results):
-        if (real_value * 1.2) > results[idx] and (real_value * 0.8) < results[idx]:
-            new_boundry = tester_array.T[idx]
-
-    tester_array = choose_answers(new_boundry, True, 0.1)
-    final_values = combo_finder(frac_list, tester_array)
-    final_values = final_values.T
-    results = solution_tester(final_values, real_value)
-
-    for idx, i in enumerate(results):
-        if (real_value * 1.1) > results[idx] and (real_value * 0.9) < results[idx]:
-            new_boundry = tester_array.T[idx]
-
-
-for indexer, k in enumerate(ki_randomized):
-
-    tester_arary[indexer] = choose_species(indexer)
-
+    data_holder2[0, idx] = np.mean(a_temp)
+    data_holder2[1, idx] = np.mean(b_temp)
+    data_holder2[2, idx] = np.mean(c_temp)
+    data_holder2[3, idx] = np.mean(d_temp)
+    data_holder2[4, idx] = np.mean(e_temp)
 
 
 ###############################################################################
@@ -760,11 +749,11 @@ E_iso_solutions_mean = E_isotope_ratio.mean(axis=0)
 
 #create specific lists for testing correlation for each species
 for i, q in time_array:
-    A_model_corr.append(A_iso_solutions_mean[i])
-    B_model_corr.append(B_iso_solutions_mean[i])
-    C_model_corr.append(C_iso_solutions_mean[i])
-    D_model_corr.append(D_iso_solutions_mean[i])
-    E_model_corr.append(E_iso_solutions_mean[i])
+    A_model_corr.append(data_holder2[0,i])
+    B_model_corr.append(data_holder2[1,i])
+    C_model_corr.append(data_holder2[2,i])
+    D_model_corr.append(data_holder2[3,i])
+    E_model_corr.append(data_holder2[4,i])
 
 A_prime = np.array(A_model_corr)
 A_prime = A_prime.reshape(-1,1)
@@ -789,16 +778,16 @@ plt.xlim(0, np.max(A_model_corr))
 plt.close()
 
 print('\n')
-A_regression  = LinearRegression().fit(A_prime[1:], A_iso_emperical[1:])
-print('A model verus real isotopes. r^2', A_regression.score(A_prime[1:], A_iso_emperical[1:]))
-B_regression  = LinearRegression().fit(B_prime[1:], B_iso_emperical[1:])
-print('B model verus real isotopes r^2', B_regression.score(B_prime[1:], B_iso_emperical[1:]))
-C_regression  = LinearRegression().fit(C_prime[1:], C_iso_emperical[1:])
-print('C model verus real isotopes. r^2', C_regression.score(C_prime[1:], C_iso_emperical[1:]))
-D_regression  = LinearRegression().fit(D_prime[1:], D_iso_emperical[1:])
-print('D model verus real isotopes r^2', D_regression.score(D_prime[1:], D_iso_emperical[1:]))
-E_regression  = LinearRegression().fit(E_prime[1:], E_iso_emperical[1:])
-print('E model verus real isotopes. r^2', E_regression.score(E_prime[1:], E_iso_emperical[1:]))
+A_regression  = LinearRegression().fit(A_prime[2:], A_iso_emperical[2:])
+print('A model verus real isotopes. r^2', A_regression.score(A_prime[2:], A_iso_emperical[2:]))
+B_regression  = LinearRegression().fit(B_prime[2:], B_iso_emperical[2:])
+print('B model verus real isotopes r^2', B_regression.score(B_prime[2:], B_iso_emperical[2:]))
+C_regression  = LinearRegression().fit(C_prime[2:], C_iso_emperical[2:])
+print('C model verus real isotopes. r^2', C_regression.score(C_prime[2:], C_iso_emperical[2:]))
+D_regression  = LinearRegression().fit(D_prime[2:], D_iso_emperical[2:])
+print('D model verus real isotopes r^2', D_regression.score(D_prime[2:], D_iso_emperical[2:]))
+E_regression  = LinearRegression().fit(E_prime[2:], E_iso_emperical[2:])
+print('E model verus real isotopes. r^2', E_regression.score(E_prime[2:], E_iso_emperical[2:]))
 
 ###############################################################################
 ###############################################################################
@@ -1060,5 +1049,50 @@ ax.set_xticklabels(['0','1','2','3','4','5'])
 
 plt.ylim(-5,5)
 plt.savefig('image_delta.png', bbox_inches='tight', pad_inches=0.075, dpi=200, alpha=0.004)
+plt.show()
+plt.close()
+
+###############################################################################
+###############################################################################
+###############################################################################
+
+
+#make figure layout
+fig = plt.figure(figsize=(8.,4.))
+
+#set axes for the plot within the figure
+ax = fig.add_axes([0.0, 0., 1., 1.])
+
+#force plot to not have any buffer space
+plt.margins(x=0, y=0)
+
+ax.legend([line1, line2, line3, line4, line5],
+          ['MoO$_{4}$','MoO$_{3}$S','MoO$_{2}$S$_{2}$','MoOS$_{3}$', 'MoS$_{4}$'],
+                              loc='upper right',
+          fancybox=True, ncol=2, fontsize=12, framealpha=0.9)
+
+ax.set_xlabel(r'Time (s; $ \times 10^{5}$)', fontsize=12, color='k')
+ax.set_ylabel(r'[$^{98}$Mo] (permille)', fontsize=12, color='k')
+
+#define a horizontal line at 0 on y axis
+
+ln_horizontal = np.zeros(len(time_values))
+
+
+plt.plot(time_values, data_holder2[0], marker='', color='grey', alpha=0.9)
+plt.plot(time_values, data_holder2[1], marker='', color='goldenrod', alpha=0.9)
+plt.plot(time_values, data_holder2[2], marker='', color='chocolate', alpha=0.9)
+plt.plot(time_values, data_holder2[3], marker='', color='royalblue', alpha=0.9)
+plt.plot(time_values, data_holder2[4], marker='', color='dodgerblue', alpha=0.9)
+
+plt.plot(time_values, ln_horizontal, marker='', color='black', linestyle='--', markeredgecolor='black', linewidth=0.5)
+
+#plt.xlim(0,500000)
+
+ax.set_xticks([0.,100000,200000,300000,400000,500000])
+ax.set_xticklabels(['0','1','2','3','4','5'])
+
+plt.ylim(-5,5)
+plt.savefig('image_delta2.png', bbox_inches='tight', pad_inches=0.075, dpi=200, alpha=0.004)
 plt.show()
 plt.close()
